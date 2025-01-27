@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ExerciseLibraryScreen } from './src/screens/ExerciseLibraryScreen';
 import { PlateCalculatorScreen } from './src/screens/PlateCalculatorScreen';
@@ -29,6 +30,13 @@ export default function App() {
             component={HomeScreen}
             options={{
               title: 'Session',
+              tabBarIcon: ({ focused, color, size }) => (
+                <MaterialCommunityIcons 
+                  name="home" 
+                  size={size} 
+                  color={color}
+                />
+              ),
             }}
           />
           <Tab.Screen 
@@ -36,6 +44,13 @@ export default function App() {
             component={ExerciseLibraryScreen}
             options={{
               title: 'Exercises',
+              tabBarIcon: ({ focused, color, size }) => (
+                <MaterialCommunityIcons 
+                  name="dumbbell" 
+                  size={size} 
+                  color={color}
+                />
+              ),
             }}
           />
           <Tab.Screen 
@@ -43,6 +58,13 @@ export default function App() {
             component={PlateCalculatorScreen}
             options={{
               title: 'Plates',
+              tabBarIcon: ({ focused, color, size }) => (
+                <MaterialCommunityIcons 
+                  name="calculator" 
+                  size={size} 
+                  color={color}
+                />
+              ),
             }}
           />
           <Tab.Screen 
@@ -50,6 +72,13 @@ export default function App() {
             component={SettingsScreen}
             options={{
               title: 'Settings',
+              tabBarIcon: ({ focused, color, size }) => (
+                <MaterialCommunityIcons 
+                  name="cog" 
+                  size={size} 
+                  color={color}
+                />
+              ),
             }}
           />
         </Tab.Navigator>

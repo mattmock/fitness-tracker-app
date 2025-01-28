@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export function HomeScreen() {
@@ -12,10 +12,14 @@ export function HomeScreen() {
         <View style={styles.currentSession}>
           <View style={styles.sessionContainer}>
             <Text style={styles.placeholderText}>
-              Tap Add Exercises to start your workout
+              Tap Add Exercise to start your workout
             </Text>
+            <Image 
+              source={require('../../assets/images/empty-current-session-background.jpeg')}
+              style={styles.placeholderImage}
+            />
             <TouchableOpacity style={styles.addExerciseButton}>
-              <Text style={styles.addExerciseText}>Add Exercises</Text>
+              <Text style={styles.addExerciseText}>Add Exercise</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -60,6 +64,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 20,
+  },
+  placeholderImage: {
+    position: 'absolute',
+    width: '80%',
+    height: '50%',
+    opacity: 0.15,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+    top: '25%',
   },
   addExerciseButton: {
     backgroundColor: '#101112e5',

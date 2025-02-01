@@ -3,6 +3,8 @@ import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 interface LoadingSpinnerProps {
   message?: string;
+  size?: 'small' | 'large';
+  color?: string;
 }
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = 'Loading...' }) => {

@@ -1,10 +1,14 @@
 import { openDatabaseAsync, SQLiteDatabase } from 'expo-sqlite';
 
+interface QueryParams {
+  [key: string]: string | number | boolean | null;
+}
+
 interface DatabaseConnection {
   db: SQLiteDatabase | null;
   init: () => Promise<void>;
   close: () => Promise<void>;
-  executeTransaction: (query: string, params?: any[]) => Promise<void>;
+  executeTransaction: (query: string, params?: QueryParams) => Promise<void>;
 }
 
 // Initialize database connection
@@ -28,7 +32,7 @@ const database: DatabaseConnection = {
     }
   },
 
-  async executeTransaction(query: string, params: any[] = []) {
+  async executeTransaction(query: string, params: QueryParams = {}) {
     if (!this.db) throw new Error('Database not initialized');
     
     await this.db.runAsync(query, params);

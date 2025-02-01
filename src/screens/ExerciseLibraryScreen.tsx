@@ -2,7 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export function ExerciseLibraryScreen() {
+interface ExerciseLibraryScreenProps {
+  // Add any props here
+}
+
+export function ExerciseLibraryScreen(props: ExerciseLibraryScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>

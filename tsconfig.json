@@ -7,6 +7,10 @@
     "strictFunctionTypes": true,
     "strictPropertyInitialization": true,
     "noImplicitThis": true,
-    "alwaysStrict": true
+    "alwaysStrict": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@db/*": ["db/*"]
+    }
   }
 }

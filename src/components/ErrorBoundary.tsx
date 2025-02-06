@@ -10,7 +10,7 @@ interface ErrorBoundaryState {
   error?: Error;
 }
 
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundaryComponent extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -51,4 +51,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
-}); 
+});
+
+export const ErrorBoundary = ErrorBoundaryComponent;
+export default ErrorBoundaryComponent; 

@@ -1,14 +1,23 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
+
 export function HomeScreen() {
+  const navigation = useNavigation<HomeScreenNavigationProp>();
+
+  const handleAddExercise = () => {
+    navigation.navigate('ExerciseLibrary');
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerText}>Current Session</Text>
-        </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <Text style={styles.headerText}>Current Session</Text>
+      <View style={styles.content}>
         <View style={styles.currentSession}>
           <View style={styles.sessionContainer}>
             <Text style={styles.placeholderText}>
@@ -18,7 +27,10 @@ export function HomeScreen() {
               source={require('../../assets/images/empty-current-session-background.jpeg')}
               style={styles.placeholderImage}
             />
-            <TouchableOpacity style={styles.addExerciseButton}>
+            <TouchableOpacity 
+              style={styles.addExerciseButton}
+              onPress={handleAddExercise}
+            >
               <Text style={styles.addExerciseText}>Add Exercise</Text>
             </TouchableOpacity>
           </View>
@@ -33,20 +45,20 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  container: {
     flex: 1,
     backgroundColor: '#fff',
   },
-  container: {
+  headerText: {
+    fontSize: 34,
+    fontWeight: 'bold',
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  content: {
     flex: 1,
     padding: 16,
-  },
-  header: {
-    marginBottom: 16,
-  },
-  headerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
   },
   currentSession: {
     flex: 1,

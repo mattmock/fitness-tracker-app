@@ -6,22 +6,6 @@ const SCHEMA_VERSION = 1;
 // Initialize database schema
 export async function initializeSchema(db: SQLiteDatabase): Promise<void> {
   try {
-    // Create Exercise table
-    await createExerciseTable(db);
-    
-    // Update schema version (correct PRAGMA syntax)
-    await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
-    
-    console.log('Database schema initialized');
-  } catch (error) {
-    console.error('Schema initialization failed:', error);
-    throw error;
-  }
-}
-
-// Create Exercise table (simplified)
-async function createExerciseTable(db: SQLiteDatabase): Promise<void> {
-  try {
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS Exercise (
         id TEXT PRIMARY KEY NOT NULL,
@@ -34,7 +18,7 @@ async function createExerciseTable(db: SQLiteDatabase): Promise<void> {
         updatedAt TEXT
       );
     `);
-    console.log('Exercise table created/verified');
+    console.log('Exercise table created');
   } catch (error) {
     console.error('Failed to create Exercise table:', error);
     throw error;

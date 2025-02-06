@@ -1,27 +1,45 @@
 import React, { useEffect, useState } from 'react';
-import database from './database';
+import { initializeSchema } from './DatabaseSetup';
+import { openDatabaseAsync } from 'expo-sqlite';
+import { SQLiteDatabase } from 'expo-sqlite';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function DatabaseProvider({ children }: { children: React.ReactNode }) {
+interface DatabaseContextType {
+  db: SQLiteDatabase | null;
+}
+
+const DatabaseContext = React.createContext<DatabaseContextType>({ db: null });
+
+export function DatabaseProvider({ children }: { children: React.ReactNode }) {
+  const [db, setDb] = useState<SQLiteDatabase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    const initialize = async () => {
+    const initDB = async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        await database.init();
-      } catch (err) {
-        console.error('Database initialization failed:', err);
-        setError(err as Error);
+        const database = await openDatabaseAsync('fitness-tracker.db');
+        await initializeSchema(database);
+        setDb(database);
+      } catch (error) {
+        console.error('Database initialization failed:', error);
+        setError(error as Error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    initialize();
+    initDB();
+
+    return () => {
+      if (db) {
+        db.closeAsync().catch(console.error);
+      } else {
+        console.warn('Database connection not established during cleanup');
+      }
+    };
   }, []);
 
   if (isLoading) {
@@ -45,7 +63,9 @@ export default function DatabaseProvider({ children }: { children: React.ReactNo
 
   return (
     <ErrorBoundary>
-      {children}
+      <DatabaseContext.Provider value={{ db }}>
+        {children}
+      </DatabaseContext.Provider>
     </ErrorBoundary>
   );
 }
@@ -68,3 +88,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+export const useDatabase = () => {
+  const context = React.useContext(DatabaseContext);
+  if (!context) {
+    throw new Error('useDatabase must be used within a DatabaseProvider');
+  }
+  return context;
+};

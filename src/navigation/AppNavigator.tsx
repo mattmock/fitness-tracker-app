@@ -4,8 +4,9 @@ import { ExerciseLibraryScreen } from '../screens/ExerciseLibraryScreen';
 import { ExerciseListScreen } from '../screens/ExerciseListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { PlateCalculatorScreen } from '../screens/PlateCalculatorScreen';
+import { RootStackParamList } from './types';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
   return (
@@ -24,7 +25,7 @@ export function AppNavigator() {
       />
       <Stack.Screen
         name="ExerciseList"
-        component={ExerciseListScreen}
+        component={ExerciseListScreen as React.ComponentType<any>}
       />
       <Stack.Screen
         name="Settings"

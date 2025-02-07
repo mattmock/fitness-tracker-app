@@ -11,7 +11,7 @@ import { RootStackParamList } from '../navigation/types';
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-interface ExerciseCategory {
+interface ExerciseGroup {
   name: string;
   exercises: Exercise[];
 }
@@ -43,44 +43,44 @@ export function ExerciseLibraryScreen() {
     fetchData();
   }, [exerciseService]);
 
-  const getExercisesByCategory = (): ExerciseCategory[] => {
-    const categories = new Map<string, Exercise[]>();
+  const getExercisesByGroup = (): ExerciseGroup[] => {
+    const groups = new Map<string, Exercise[]>();
     
     exercises.forEach(exercise => {
-      const category = exercise.category || 'Uncategorized';
-      if (!categories.has(category)) {
-        categories.set(category, []);
+      const group = exercise.category || 'Other';
+      if (!groups.has(group)) {
+        groups.set(group, []);
       }
-      categories.get(category)?.push(exercise);
+      groups.get(group)?.push(exercise);
     });
 
-    return Array.from(categories.entries()).map(([name, exercises]) => ({
+    return Array.from(groups.entries()).map(([name, exercises]) => ({
       name,
       exercises
     }));
   };
 
-  const handleCategoryPress = (category: ExerciseCategory) => {
+  const handleGroupPress = (group: ExerciseGroup) => {
     navigation.navigate('ExerciseList', {
-      category: category.name,
-      exercises: category.exercises
+      category: group.name,
+      exercises: group.exercises
     });
   };
 
-  const renderExerciseCategories = () => (
+  const renderExerciseGroups = () => (
     <FlatList
-      data={getExercisesByCategory()}
+      data={getExercisesByGroup()}
       keyExtractor={(item) => item.name}
       renderItem={({ item }) => (
         <ExerciseTypeCard
           title={item.name}
           exerciseCount={item.exercises.length}
-          onPress={() => handleCategoryPress(item)}
+          onPress={() => handleGroupPress(item)}
         />
       )}
       contentContainerStyle={styles.listContent}
       ListEmptyComponent={
-        <Text style={styles.placeholderText}>No exercise categories found</Text>
+        <Text style={styles.placeholderText}>No exercise groups found</Text>
       }
     />
   );
@@ -95,7 +95,7 @@ export function ExerciseLibraryScreen() {
 
   const renderTabContent = () => {
     if (activeTab === 'exercises') {
-      return renderExerciseCategories();
+      return renderExerciseGroups();
     } else {
       return (
         <FlatList

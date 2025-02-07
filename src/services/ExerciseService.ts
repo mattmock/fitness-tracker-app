@@ -8,4 +8,5 @@ export interface IExerciseService {
   getRoutines(): Promise<Routine[]>;
   getSessions(): Promise<Session[]>;
   getSessionExercises(): Promise<SessionExercise[]>;
+  createSessionWithExercises(exercises: Exercise[]): Promise<Session>;
 }

@@ -1,44 +1,58 @@
 import React, { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
+import { Session } from '../db/models';
+import { format } from 'date-fns';
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
+interface RecentSessionHistoryProps {
+  sessions: Session[];
+}
 
-export function RecentSessionHistory() {
-  // ref
+export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
-
-  // variables
   const snapPoints = ['10%', '50%', '85%'];
 
-  // callbacks
-  const handleSheetChanges = useCallback((index: number) => {
-    console.log('handleSheetChanges', index);
-  }, []);
+  const renderSessionItem = ({ item }: { item: Session }) => {
+    const date = new Date(item.startTime);
+    const formattedDate = format(date, 'MMM d, yyyy');
+    const formattedTime = format(date, 'h:mm a');
+
+    return (
+      <View style={styles.sessionItem}>
+        <View style={styles.sessionHeader}>
+          <Text style={styles.sessionDate}>{formattedDate}</Text>
+          <Text style={styles.sessionTime}>{formattedTime}</Text>
+        </View>
+        <Text style={styles.exerciseCount}>
+          {item.sessionExercises.length} exercise{item.sessionExercises.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+    );
+  };
 
   return (
     <BottomSheet
       ref={bottomSheetRef}
       index={0}
       snapPoints={snapPoints}
-      onChange={handleSheetChanges}
       enablePanDownToClose={false}
       handleStyle={styles.handle}
       handleIndicatorStyle={styles.indicator}
       backgroundStyle={styles.background}
       style={styles.bottomSheet}
     >
-      <BottomSheetView style={styles.container}>
+      <BottomSheetView style={styles.contentContainer}>
         <View style={styles.header}>
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Recent History</Text>
           </View>
         </View>
-        <View style={styles.contentWrapper}>
-          <View style={styles.content}>
-            <Text style={styles.placeholderText}>No recent sessions</Text>
-          </View>
-        </View>
+        <FlatList
+          data={sessions}
+          renderItem={renderSessionItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+        />
       </BottomSheetView>
     </BottomSheet>
   );
@@ -49,14 +63,11 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -3,
-    },
+    shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.15,
     shadowRadius: 5,
   },
-  container: {
+  contentContainer: {
     flex: 1,
   },
   handle: {
@@ -90,24 +101,32 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    textAlign: 'left',
     marginBottom: 4,
   },
-  contentWrapper: {
-    flex: 1,
-    position: 'relative',
+  listContent: {
+    paddingHorizontal: 30,
   },
-  content: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
+  sessionItem: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
   },
-  placeholderText: {
-    color: '#9CA3AF',
+  sessionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  sessionDate: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  sessionTime: {
+    fontSize: 16,
+    color: '#666',
+  },
+  exerciseCount: {
+    fontSize: 14,
+    color: '#666',
   },
 }); 

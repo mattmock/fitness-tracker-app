@@ -15,31 +15,41 @@ type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'H
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const { exerciseService } = useWorkoutData();
 
   // Refresh active session when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      const fetchActiveSession = async () => {
+      const fetchSessions = async () => {
         try {
           const sessions = await exerciseService.getSessions();
-          // Get the most recent session from today
+          console.log('Total sessions fetched:', sessions.length);
+          
           const today = new Date().toISOString().split('T')[0];
           const todaysSessions = sessions.filter(session => 
             session.startTime.startsWith(today)
           );
+          const pastSessions = sessions.filter(session => 
+            !session.startTime.startsWith(today)
+          );
           
+          console.log('Today\'s sessions:', todaysSessions.length);
+          console.log('Past sessions:', pastSessions.length);
+
           if (todaysSessions.length > 0) {
             setActiveSession(todaysSessions[todaysSessions.length - 1]);
           } else {
             setActiveSession(null);
           }
+
+          setPastSessions(pastSessions);
         } catch (error) {
-          console.error('Failed to fetch active session:', error);
+          console.error('Failed to fetch sessions:', error);
         }
       };
 
-      fetchActiveSession();
+      fetchSessions();
     }, [exerciseService])
   );
 
@@ -89,7 +99,7 @@ export function HomeScreen() {
             {renderCurrentSession()}
           </View>
         </View>
-        <RecentSessionHistory />
+        {pastSessions.length > 0 && <RecentSessionHistory sessions={pastSessions} />}
       </View>
     </BottomSheetModalProvider>
   );

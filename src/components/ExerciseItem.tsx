@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { SessionExercise } from '../db/models';
 import { useWorkoutData } from '../services';
 import { Ionicons } from '@expo/vector-icons';
+import ExerciseSet from './ExerciseSet';
 
 interface ExerciseItemProps {
   item: SessionExercise;
@@ -14,6 +15,7 @@ export function ExerciseItem({ item, onExpand }: ExerciseItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { exerciseService } = useWorkoutData();
   const [expandAnim] = useState(new Animated.Value(0));
+  const [sets, setSets] = useState<number>(item.sets || 1);
 
   useEffect(() => {
     const fetchExerciseName = async () => {
@@ -44,28 +46,22 @@ export function ExerciseItem({ item, onExpand }: ExerciseItemProps) {
     onExpand(!isExpanded);
   };
 
-  const renderSet = (index: number) => (
-    <View key={index} style={styles.setRow}>
-      <Text style={styles.setNumber}>Set {index + 1}</Text>
-      <View style={styles.setInputs}>
-        <TouchableOpacity style={styles.setButton}>
-          <Text style={styles.setButtonText}>10</Text>
-          <Text style={styles.setLabel}>reps</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.setButton}>
-          <Text style={styles.setButtonText}>0</Text>
-          <Text style={styles.setLabel}>kg</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.checkButton}>
-          <Ionicons 
-            name="checkmark-circle-outline"
-            size={24} 
-            color="#9CA3AF"
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const handleCheckPress = (index: number) => {
+    if (index === sets - 1) {
+      setSets(prev => prev + 1);
+    }
+  };
+
+  const renderSets = () => {
+    return Array.from({ length: sets }).map((_, index) => (
+      <ExerciseSet
+        key={index}
+        index={index}
+        reps={item.reps}
+        onCheckPress={() => handleCheckPress(index)}
+      />
+    ));
+  };
 
   const maxHeight = expandAnim.interpolate({
     inputRange: [0, 1],
@@ -83,7 +79,7 @@ export function ExerciseItem({ item, onExpand }: ExerciseItemProps) {
           <Text style={styles.exerciseName}>{exerciseName || 'Loading...'}</Text>
           <View style={styles.exerciseStatus}>
             <Text style={styles.exerciseProgress}>
-              3 sets × 10 reps
+              {item.sets} sets × {item.reps} reps
             </Text>
             <Ionicons 
               name={isExpanded ? "chevron-up" : "chevron-down"} 
@@ -95,7 +91,7 @@ export function ExerciseItem({ item, onExpand }: ExerciseItemProps) {
       </TouchableOpacity>
       {isExpanded && (
         <View style={styles.setsContainer}>
-          {[0, 1, 2].map(renderSet)}
+          {renderSets()}
         </View>
       )}
     </Animated.View>
@@ -133,41 +129,5 @@ const styles = StyleSheet.create({
   setsContainer: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-  },
-  setRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  setNumber: {
-    fontSize: 17,
-    fontWeight: '500',
-    color: '#666',
-    width: 60,
-  },
-  setInputs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  setButton: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 8,
-    width: 70,
-    alignItems: 'center',
-  },
-  setButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  setLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  checkButton: {
-    padding: 4,
   },
 }); 

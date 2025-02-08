@@ -1,8 +1,25 @@
 import { IExerciseService } from '../ExerciseService';
 import { Exercise, Routine, Session, SessionExercise } from '@db/models';
 import { mockExercises, mockRoutines, mockSessions } from './mockData';
+import { ConfigService } from '../ConfigService';
+import { mockSessions as mockSessionsData } from './data/sessions';
 
 export class MockExerciseService implements IExerciseService {
+  private getMockSessions(): Session[] {
+    const dataLevel = ConfigService.mockDataLevel;
+    console.log('Using mock data level:', dataLevel);
+    
+    switch (dataLevel) {
+      case 'empty':
+        return [];
+      case 'minimal':
+        return mockSessionsData.slice(0, 1);
+      case 'full':
+      default:
+        return [...mockSessionsData];
+    }
+  }
+
   getSessionExercises(): Promise<SessionExercise[]> {
     return Promise.resolve(mockSessions.flatMap(session => session.sessionExercises));
   }
@@ -24,7 +41,9 @@ export class MockExerciseService implements IExerciseService {
     return Promise.resolve(mockRoutines);
   }
   async getSessions(): Promise<Session[]> {
-    return Promise.resolve(mockSessions);
+    const sessions = this.getMockSessions();
+    console.log('Returning sessions:', sessions.length);
+    return Promise.resolve(sessions);
   }
 
   async createSessionWithExercises(exercises: Exercise[]): Promise<Session> {

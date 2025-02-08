@@ -9,6 +9,7 @@ import { useWorkoutData } from '../services';
 import { ActiveSession } from '../components/ActiveSession';
 import { RecentSessionHistory } from '../components/RecentSessionHistory';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { Ionicons } from '@expo/vector-icons';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -92,7 +93,15 @@ export function HomeScreen() {
         <View style={styles.mainContent}>
           <SafeAreaView edges={['top']}>
             <View style={styles.headerContainer}>
-              <Text style={styles.headerText}>Current Session</Text>
+              <View style={styles.headerContent}>
+                <Text style={styles.headerText}>Current Session</Text>
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate('Settings')}
+                  style={styles.settingsButton}
+                >
+                  <Ionicons name="settings-outline" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
             </View>
           </SafeAreaView>
           <View style={styles.currentSession}>
@@ -173,5 +182,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  settingsButton: {
+    padding: 8,
   },
 }); 

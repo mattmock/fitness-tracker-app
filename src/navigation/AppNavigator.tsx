@@ -30,7 +30,6 @@ export function AppNavigator() {
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{ title: 'Settings' }}
       />
       <Stack.Screen
         name="PlateCalculator"

@@ -8,6 +8,7 @@ import { Session } from '../db/models';
 import { useWorkoutData } from '../services';
 import { ActiveSession } from '../components/ActiveSession';
 import { RecentSessionHistory } from '../components/RecentSessionHistory';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -75,24 +76,22 @@ export function HomeScreen() {
     );
   };
 
-  const renderSessionHistory = () => {
-    return (
-      <View style={styles.historyContainer}>
+  return (
+    <BottomSheetModalProvider>
+      <View style={styles.container}>
+        <View style={styles.mainContent}>
+          <SafeAreaView edges={['top']}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.headerText}>Current Session</Text>
+            </View>
+          </SafeAreaView>
+          <View style={styles.currentSession}>
+            {renderCurrentSession()}
+          </View>
+        </View>
         <RecentSessionHistory />
       </View>
-    );
-  };
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.headerText}>Current Session</Text>
-      <View style={styles.content}>
-        <View style={styles.currentSession}>
-          {renderCurrentSession()}
-        </View>
-        {renderSessionHistory()}
-      </View>
-    </SafeAreaView>
+    </BottomSheetModalProvider>
   );
 }
 
@@ -101,28 +100,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  mainContent: {
+    flex: 1,
+  },
+  headerContainer: {
+    backgroundColor: '#fff',
+    borderBottomColor: '#f0f0f0',
+    zIndex: 0,
+  },
   headerText: {
-    fontSize: 34,
+    fontSize: 28,
     fontWeight: 'bold',
     paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  content: {
-    flex: 1,
-    position: 'relative',
+    paddingVertical: 12,
   },
   currentSession: {
     flex: 1,
-    padding: 16,
-    paddingBottom: 80, // Make room for collapsed history header
-  },
-  historyContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    maxHeight: '50%',
+    paddingHorizontal: 16,
+    zIndex: 0,
   },
   emptySession: {
     flex: 1,
@@ -131,6 +126,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
+    maxHeight: '60%',
   },
   placeholderText: {
     color: '#9CA3AF',
@@ -167,10 +163,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 8,
   },
 }); 

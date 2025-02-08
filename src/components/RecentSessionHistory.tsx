@@ -1,137 +1,53 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { GestureDetector, Gesture, GestureUpdateEvent, GestureStateChangeEvent, PanGestureHandlerEventPayload } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
-  withSpring,
-  useSharedValue,
-  runOnJS,
-} from 'react-native-reanimated';
+import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
-const SNAP_POINTS = {
-  COLLAPSED: 0,
-  HALF: -SCREEN_HEIGHT * 0.4,
-  FULL: -SCREEN_HEIGHT * 0.85
-};
 
 export function RecentSessionHistory() {
-  const [position, setPosition] = useState<'collapsed' | 'half' | 'full'>('collapsed');
-  const translateY = useSharedValue(0);
-  const context = useSharedValue({ y: 0 });
+  // ref
+  const bottomSheetRef = useRef<BottomSheet>(null);
 
-  const snapToPosition = (newPosition: 'collapsed' | 'half' | 'full') => {
-    'worklet';
-    const snapPoint = 
-      newPosition === 'collapsed' ? 0 :
-      newPosition === 'half' ? SNAP_POINTS.HALF :
-      SNAP_POINTS.FULL;
+  // variables
+  const snapPoints = ['10%', '50%', '85%'];
 
-    translateY.value = withSpring(snapPoint, {
-      damping: 20,
-      stiffness: 300,
-    });
-    runOnJS(setPosition)(newPosition);
-  };
-
-  const gesture = Gesture.Pan()
-    .onStart(() => {
-      'worklet';
-      context.value = { y: translateY.value };
-    })
-    .onUpdate((event: GestureUpdateEvent<PanGestureHandlerEventPayload>) => {
-      'worklet';
-      if (position === 'collapsed' && event.translationY > 0) return;
-      
-      const newY = context.value.y + event.translationY;
-      if (newY <= 0 && newY >= SNAP_POINTS.FULL) {
-        translateY.value = newY;
-      }
-    })
-    .onEnd((event: GestureStateChangeEvent<PanGestureHandlerEventPayload>) => {
-      'worklet';
-      const velocity = event.velocityY;
-      const currentPosition = translateY.value;
-
-      // Handle swipe up from collapsed state
-      if (position === 'collapsed' && event.translationY < -20) {
-        snapToPosition('half');
-        return;
-      }
-
-      // Handle swipe up from half state
-      if (position === 'half' && event.translationY < -20) {
-        snapToPosition('full');
-        return;
-      }
-
-      // Handle swipe down
-      if (event.translationY > 20) {
-        if (position === 'full') {
-          snapToPosition('half');
-        } else if (position === 'half') {
-          snapToPosition('collapsed');
-        }
-        return;
-      }
-
-      // If no clear swipe, snap back to current position
-      snapToPosition(position);
-    });
-
-  const animatedStyle = useAnimatedStyle(() => {
-    'worklet';
-    const height = 
-      position === 'collapsed' ? 90 :
-      position === 'half' ? SCREEN_HEIGHT * 0.5 :
-      SCREEN_HEIGHT * 0.9;
-
-    return {
-      transform: [{ translateY: translateY.value }],
-      height,
-    };
-  });
-
-  const contentStyle = useAnimatedStyle(() => {
-    'worklet';
-    const opacity = position === 'collapsed' ? 0 : 1;
-    return { opacity };
-  });
+  // callbacks
+  const handleSheetChanges = useCallback((index: number) => {
+    console.log('handleSheetChanges', index);
+  }, []);
 
   return (
-    <GestureDetector gesture={gesture}>
-      <Animated.View 
-        style={[
-          styles.container,
-          animatedStyle,
-          { zIndex: position === 'collapsed' ? 1 : 999 }
-        ]}
-      >
+    <BottomSheet
+      ref={bottomSheetRef}
+      index={0}
+      snapPoints={snapPoints}
+      onChange={handleSheetChanges}
+      enablePanDownToClose={false}
+      handleStyle={styles.handle}
+      handleIndicatorStyle={styles.indicator}
+      backgroundStyle={styles.background}
+      style={styles.bottomSheet}
+    >
+      <BottomSheetView style={styles.container}>
         <View style={styles.header}>
-          <View style={styles.pullBar} />
           <View style={styles.titleContainer}>
             <Text style={styles.title}>Recent History</Text>
           </View>
         </View>
-        <Animated.View style={[styles.content, contentStyle]}>
-          <Text style={styles.placeholderText}>No recent sessions</Text>
-        </Animated.View>
-      </Animated.View>
-    </GestureDetector>
+        <View style={styles.contentWrapper}>
+          <View style={styles.content}>
+            <Text style={styles.placeholderText}>No recent sessions</Text>
+          </View>
+        </View>
+      </BottomSheetView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    overflow: 'hidden',
-    paddingBottom: 34,
+  bottomSheet: {
+    zIndex: 1000,
+    elevation: 10,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -139,34 +55,54 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.15,
     shadowRadius: 5,
-    elevation: 5,
   },
-  header: {
-    paddingTop: 12,
-    paddingBottom: 8,
+  container: {
+    flex: 1,
+  },
+  handle: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+    zIndex: 1000,
   },
-  titleContainer: {
-    paddingHorizontal: 16,
-  },
-  pullBar: {
+  indicator: {
     width: 36,
     height: 5,
     backgroundColor: '#E5E7EB',
     borderRadius: 2.5,
-    marginBottom: 8,
-    alignSelf: 'center',
+  },
+  background: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  header: {
+    paddingTop: 4,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
+  },
+  titleContainer: {
+    paddingHorizontal: 30,
+    paddingBottom: 25,
   },
   title: {
-    fontSize: 34,
+    fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'left',
     marginBottom: 4,
   },
-  content: {
+  contentWrapper: {
     flex: 1,
+    position: 'relative',
+  },
+  content: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -7,9 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Session } from '../db/models';
 import { useWorkoutData } from '../services';
 import { ActiveSession } from '../components/ActiveSession';
-import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet';
+import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet/index';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
+import { RecentSessionHistory } from '../components/RecentSessionHistory';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -18,6 +19,15 @@ export function HomeScreen() {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const { exerciseService } = useWorkoutData();
+
+  // Calculate snap points based on session count
+  const snapPoints = React.useMemo(() => {
+    const points = ['10%', '45%'];
+    if (pastSessions.length >= 4) {
+      points.push('85%');
+    }
+    return points;
+  }, [pastSessions.length]);
 
   // Refresh active session when screen is focused
   useFocusEffect(
@@ -108,7 +118,11 @@ export function HomeScreen() {
             {renderCurrentSession()}
           </View>
         </View>
-        {pastSessions.length > 0 && <PastSessionBottomSheet sessions={pastSessions} />}
+        {pastSessions.length > 0 && (
+          <PastSessionBottomSheet initialSnapPoints={snapPoints}>
+            <RecentSessionHistory sessions={pastSessions} />
+          </PastSessionBottomSheet>
+        )}
       </View>
     </BottomSheetModalProvider>
   );

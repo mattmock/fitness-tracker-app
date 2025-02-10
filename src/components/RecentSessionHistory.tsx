@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Session } from '../db/models';
 import { format } from 'date-fns';
+import { useWorkoutData } from '../services';
+import { Ionicons } from '@expo/vector-icons';
+import { useBottomSheet } from './PastSessionBottomSheet/BottomSheetContext';
 
 interface RecentSessionHistoryProps {
   sessions: Session[];
@@ -9,22 +12,73 @@ interface RecentSessionHistoryProps {
 
 export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
   const displayedSessions = sessions.slice(0, 6);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+  const { exerciseService } = useWorkoutData();
+  const [exerciseNames, setExerciseNames] = useState<Record<string, string>>({});
+  const bottomSheet = useBottomSheet();
+
+  // Fetch exercise names when a session is expanded
+  useEffect(() => {
+    if (expandedSessionId) {
+      const fetchExerciseNames = async () => {
+        const exercises = await exerciseService.getExercises();
+        const names: Record<string, string> = {};
+        exercises.forEach(exercise => {
+          names[exercise.id] = exercise.name;
+        });
+        setExerciseNames(names);
+      };
+      fetchExerciseNames();
+    }
+  }, [expandedSessionId, exerciseService]);
+
+  const renderExerciseItem = (sessionExercise: any) => {
+    const exerciseName = exerciseNames[sessionExercise.exerciseId] || 'Loading...';
+    return (
+      <View style={styles.exerciseItem} key={sessionExercise.id}>
+        <Text style={styles.exerciseName}>{exerciseName}</Text>
+        <Text style={styles.exerciseDetails}>
+          {sessionExercise.sets} sets × {sessionExercise.reps} reps
+        </Text>
+      </View>
+    );
+  };
 
   const renderSessionItem = ({ item }: { item: Session }) => {
     const date = new Date(item.startTime);
     const formattedDate = format(date, 'MMM d, yyyy');
     const formattedTime = format(date, 'h:mm a');
+    const isExpanded = expandedSessionId === item.id;
 
     return (
-      <View style={styles.sessionItem}>
+      <TouchableOpacity 
+        style={[styles.sessionItem, isExpanded && styles.sessionItemExpanded]}
+        onPress={() => setExpandedSessionId(isExpanded ? null : item.id)}
+        activeOpacity={0.7}
+      >
         <View style={styles.sessionHeader}>
-          <Text style={styles.sessionDate}>{formattedDate}</Text>
-          <Text style={styles.sessionTime}>{formattedTime}</Text>
+          <View style={styles.sessionInfo}>
+            <Text style={styles.sessionDate}>{formattedDate}</Text>
+            <Text style={styles.sessionTime}>{formattedTime}</Text>
+          </View>
+          <View style={styles.sessionSummary}>
+            <Text style={styles.exerciseCount}>
+              {item.sessionExercises.length} exercise{item.sessionExercises.length !== 1 ? 's' : ''}
+            </Text>
+            <Ionicons 
+              name={isExpanded ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color="#666"
+            />
+          </View>
         </View>
-        <Text style={styles.exerciseCount}>
-          {item.sessionExercises.length} exercise{item.sessionExercises.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
+        
+        {isExpanded && (
+          <View style={styles.exerciseList}>
+            {item.sessionExercises.map(renderExerciseItem)}
+          </View>
+        )}
+      </TouchableOpacity>
     );
   };
 
@@ -46,7 +100,7 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         ListFooterComponent={renderFooter}
-        scrollEnabled={false}
+        scrollEnabled={bottomSheet.isExpanded}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -67,20 +121,50 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
+  sessionItemExpanded: {
+    backgroundColor: '#f0f9ff',
+  },
   sessionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+  },
+  sessionInfo: {
+    flex: 1,
+  },
+  sessionSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   sessionDate: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 4,
   },
   sessionTime: {
     fontSize: 16,
     color: '#666',
   },
   exerciseCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  exerciseList: {
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingTop: 12,
+  },
+  exerciseItem: {
+    marginBottom: 12,
+  },
+  exerciseName: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  exerciseDetails: {
     fontSize: 14,
     color: '#666',
   },

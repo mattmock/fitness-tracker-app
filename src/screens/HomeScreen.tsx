@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Session } from '../db/models';
 import { useWorkoutData } from '../services';
 import { ActiveSession } from '../components/ActiveSession';
-import { RecentSessionHistory } from '../components/RecentSessionHistory';
+import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -25,7 +25,7 @@ export function HomeScreen() {
       const fetchSessions = async () => {
         try {
           const sessions = await exerciseService.getSessions();
-          console.log('Total sessions fetched:', sessions.length);
+          console.log('Fetched sessions:', sessions);
           
           const today = new Date().toISOString().split('T')[0];
           const todaysSessions = sessions.filter(session => 
@@ -46,7 +46,7 @@ export function HomeScreen() {
 
           setPastSessions(pastSessions);
         } catch (error) {
-          console.error('Failed to fetch sessions:', error);
+          console.error('Error fetching sessions:', error);
         }
       };
 
@@ -108,7 +108,7 @@ export function HomeScreen() {
             {renderCurrentSession()}
           </View>
         </View>
-        {pastSessions.length > 0 && <RecentSessionHistory sessions={pastSessions} />}
+        {pastSessions.length > 0 && <PastSessionBottomSheet sessions={pastSessions} />}
       </View>
     </BottomSheetModalProvider>
   );

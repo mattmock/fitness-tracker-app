@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect, useState } from 'react';
 import { ExerciseService } from './ExerciseServiceImpl';
 import { MockExerciseService } from './mocks/MockExerciseService';
 import { IExerciseService } from './ExerciseService';
@@ -15,7 +15,18 @@ interface WorkoutDataProviderProps {
 }
 
 export function WorkoutDataServiceProvider({ children }: WorkoutDataProviderProps) {
-  const exerciseService = ConfigService.useMocks ? new MockExerciseService() : new ExerciseService();
+  const [exerciseService] = useState<IExerciseService>(() => {
+    return ConfigService.useMocks ? new MockExerciseService() : new ExerciseService();
+  });
+
+  // Clean up the service when the provider is unmounted
+  useEffect(() => {
+    return () => {
+      if (exerciseService instanceof MockExerciseService) {
+        exerciseService.destroy();
+      }
+    };
+  }, [exerciseService]);
 
   return (
     <WorkoutDataContext.Provider value={{ exerciseService }}>

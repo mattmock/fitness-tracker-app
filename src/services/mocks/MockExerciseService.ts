@@ -1,52 +1,44 @@
 import { IExerciseService } from '../ExerciseService';
-import { Exercise, Routine, Session, SessionExercise } from '@db/models';
-import { mockExercises, mockRoutines } from './mockData';
+import { Exercise, Routine, Session, SessionExercise } from '../../db/models';
+import { MockDataGenerator } from './mockDataGenerator';
 import { ConfigService } from '../ConfigService';
-import { mockSessions } from './data/sessions';
 
 export class MockExerciseService implements IExerciseService {
-  private getMockSessions(): Session[] {
-    const dataLevel = ConfigService.mockDataLevel;
-    console.log('Using mock data level:', dataLevel);
-    
-    switch (dataLevel) {
-      case 'empty':
-        return [];
-      case 'minimal':
-        return mockSessions.slice(0, 1);
-      case 'full':
-      default:
-        return [...mockSessions];
-    }
+  private mockData = MockDataGenerator.generateMockData();
+  private removeConfigListener: (() => void) | null = null;
+
+  constructor() {
+    // Listen for config changes and regenerate data when they occur
+    this.removeConfigListener = ConfigService.addChangeListener(() => {
+      console.log('Config changed, regenerating mock data...');
+      this.regenerateMockData();
+    });
+
+    // Generate initial data
+    this.regenerateMockData();
   }
 
-  getSessionExercises(): Promise<SessionExercise[]> {
-    const sessions = this.getMockSessions();
-    return Promise.resolve(sessions.flatMap(session => session.sessionExercises));
+  private regenerateMockData() {
+    console.log('Regenerating mock data...');
+    this.mockData = MockDataGenerator.generateMockData();
   }
 
   async getExercises(): Promise<Exercise[]> {
-    const validExercises = mockExercises.map(exercise => {
-      if (!exercise.id) {
-        console.error('Mock exercise missing ID:', exercise);
-        return {
-          ...exercise,
-          id: Date.now().toString()
-        };
-      }
-      return exercise;
-    });
-    return Promise.resolve(validExercises);
+    return Promise.resolve(this.mockData.exercises);
   }
 
   async getRoutines(): Promise<Routine[]> {
-    return Promise.resolve(mockRoutines);
+    return Promise.resolve(this.mockData.routines);
   }
 
   async getSessions(): Promise<Session[]> {
-    const sessions = this.getMockSessions();
-    console.log('Returning sessions:', sessions.length);
-    return Promise.resolve(sessions);
+    return Promise.resolve(this.mockData.sessions);
+  }
+
+  async getSessionExercises(): Promise<SessionExercise[]> {
+    return Promise.resolve(
+      this.mockData.sessions.flatMap(session => session.sessionExercises)
+    );
   }
 
   async createSessionWithExercises(exercises: Exercise[]): Promise<Session> {
@@ -78,9 +70,18 @@ export class MockExerciseService implements IExerciseService {
       })),
     };
 
-    mockSessions.push(session);
-    console.log('Created mock session:', session);
+    // Add the new session to our mock data
+    this.mockData.sessions.unshift(session);
+    console.log('Created new session:', session);
+    
     return session;
   }
-  // ... other mock implementations
+
+  // Clean up when service is destroyed
+  destroy() {
+    if (this.removeConfigListener) {
+      this.removeConfigListener();
+      this.removeConfigListener = null;
+    }
+  }
 } 

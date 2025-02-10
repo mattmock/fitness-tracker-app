@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ConfigService } from '../services/ConfigService';
 import { useNavigation } from '@react-navigation/native';
@@ -12,14 +12,15 @@ type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList
 
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const [sessionCount, setSessionCount] = React.useState(ConfigService.sessionCount.toString());
+  const [exerciseCount, setExerciseCount] = React.useState(ConfigService.exerciseCount.toString());
+  const [routineCount, setRoutineCount] = React.useState(ConfigService.routineCount.toString());
 
-  const handleSetMockData = (level: typeof mockDataLevels[number]) => {
-    ConfigService.setMockDataLevel(level);
-    // Force a navigation reset to refresh the data
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Home' }],
-    });
+  const handleSaveSettings = () => {
+    ConfigService.setSessionCount(Number(sessionCount));
+    ConfigService.setExerciseCount(Number(exerciseCount));
+    ConfigService.setRoutineCount(Number(routineCount));
+    navigation.goBack();
   };
 
   return (
@@ -27,30 +28,46 @@ export function SettingsScreen() {
       <Text style={styles.title}>Settings</Text>
       
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Mock Data Level</Text>
-        <Text style={styles.description}>
-          Change the amount of mock data shown in the app
-        </Text>
-        <View style={styles.buttonGroup}>
-          {mockDataLevels.map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.button,
-                ConfigService.mockDataLevel === level && styles.activeButton,
-              ]}
-              onPress={() => handleSetMockData(level)}
-            >
-              <Text style={[
-                styles.buttonText,
-                ConfigService.mockDataLevel === level && styles.activeButtonText
-              ]}>
-                {level.charAt(0).toUpperCase() + level.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Number of Past Sessions</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={sessionCount}
+            onChangeText={setSessionCount}
+            placeholder="Enter number of sessions"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Number of Exercises</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={exerciseCount}
+            onChangeText={setExerciseCount}
+            placeholder="Enter number of exercises"
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Number of Routines</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            value={routineCount}
+            onChangeText={setRoutineCount}
+            placeholder="Enter number of routines"
+          />
         </View>
       </View>
+
+      <TouchableOpacity
+        style={styles.doneButton}
+        onPress={handleSaveSettings}
+      >
+        <Text style={styles.doneButtonText}>Done</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -100,5 +117,34 @@ const styles = StyleSheet.create({
   },
   activeButtonText: {
     color: '#fff',
+  },
+  inputContainer: {
+    marginTop: 16,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#333',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  doneButton: {
+    backgroundColor: '#007AFF',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 'auto',
+    marginBottom: 16,
+  },
+  doneButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
 }); 

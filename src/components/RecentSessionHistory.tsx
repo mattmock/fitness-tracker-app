@@ -1,5 +1,5 @@
-import React, { useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import React, { useCallback, useRef, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { Session } from '../db/models';
 import { format } from 'date-fns';
@@ -10,7 +10,16 @@ interface RecentSessionHistoryProps {
 
 export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
   const bottomSheetRef = useRef<BottomSheet>(null);
-  const snapPoints = ['10%', '50%', '85%'];
+  const snapPoints = useMemo(() => ['10%', '45%', '85%'], []);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  const displayedSessions = useMemo(() => {
+    return sessions.slice(0, 6);
+  }, [sessions]);
+
+  const handleSheetChanges = useCallback((index: number) => {
+    setIsExpanded(index > 0);
+  }, []);
 
   const renderSessionItem = ({ item }: { item: Session }) => {
     const date = new Date(item.startTime);
@@ -30,11 +39,22 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
     );
   };
 
+  const renderFooter = () => {
+    if (sessions.length <= 6) return null;
+    
+    return (
+      <TouchableOpacity style={styles.seeAllButton}>
+        <Text style={styles.seeAllButtonText}>See all past sessions</Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <BottomSheet
       ref={bottomSheetRef}
       index={0}
       snapPoints={snapPoints}
+      onChange={handleSheetChanges}
       enablePanDownToClose={false}
       handleStyle={styles.handle}
       handleIndicatorStyle={styles.indicator}
@@ -48,10 +68,13 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
           </View>
         </View>
         <FlatList
-          data={sessions}
+          data={displayedSessions}
           renderItem={renderSessionItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          ListFooterComponent={renderFooter}
+          scrollEnabled={isExpanded}
+          showsVerticalScrollIndicator={false}
         />
       </BottomSheetView>
     </BottomSheet>
@@ -105,6 +128,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 30,
+    paddingBottom: 20,
   },
   sessionItem: {
     backgroundColor: '#f5f5f5',
@@ -128,5 +152,27 @@ const styles = StyleSheet.create({
   exerciseCount: {
     fontSize: 14,
     color: '#666',
+  },
+  seeAllButton: {
+    backgroundColor: '#101112e5',
+    borderRadius: 10,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 8,
+    marginHorizontal: 0,
+    opacity: 0.9,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  seeAllButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

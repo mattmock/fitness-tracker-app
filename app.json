@@ -21,6 +21,9 @@
     },
     "plugins": [
       "expo-sqlite"
-    ]
+    ],
+    "android": {
+      "package": "com.anonymous.FitnessTracker"
+    }
   }
 }

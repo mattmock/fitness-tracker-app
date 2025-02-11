@@ -1,98 +1,99 @@
-import React, { useEffect, useState } from 'react';
-import { initializeSchema } from './DatabaseSetup';
-import { openDatabaseAsync } from 'expo-sqlite';
-import { SQLiteDatabase } from 'expo-sqlite';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { createContext, useContext } from 'react';
+import { SQLiteProvider, type SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
+import { DATABASE_NAME, schema } from './database';
+import { SEED_DB } from '@env';
+import { resetDevDatabase } from './dev/devDatabaseUtils';
 
-interface DatabaseContextType {
-  db: SQLiteDatabase | null;
+interface DatabaseProviderProps {
+  children: React.ReactNode;
 }
 
-const DatabaseContext = React.createContext<DatabaseContextType>({ db: null });
+interface DatabaseContextValue {
+  forceReset: () => Promise<void>;
+}
 
-export function DatabaseProvider({ children }: { children: React.ReactNode }) {
-  const [db, setDb] = useState<SQLiteDatabase | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+const DatabaseContext = createContext<DatabaseContextValue | null>(null);
 
-  useEffect(() => {
-    const initDB = async () => {
-      try {
-        const database = await openDatabaseAsync('fitness-tracker.db');
-        await initializeSchema(database);
-        setDb(database);
-      } catch (error) {
-        console.error('Database initialization failed:', error);
-        setError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+export function useDatabaseContext() {
+  const context = useContext(DatabaseContext);
+  if (!context) {
+    throw new Error('useDatabaseContext must be used within a DatabaseProvider');
+  }
+  return context;
+}
 
-    initDB();
+/**
+ * Initializes or migrates the database schema.
+ * If SEED_DB is true, it will reset the database with development data.
+ */
+async function migrateDbIfNeeded(db: SQLiteDatabase) {
+  console.log('Starting database initialization...');
+  
+  // Set up database configuration
+  await db.execAsync('PRAGMA journal_mode = WAL;');
+  await db.execAsync('PRAGMA foreign_keys = ON;');
 
-    return () => {
-      if (db) {
-        db.closeAsync().catch(console.error);
-      } else {
-        console.warn('Database connection not established during cleanup');
-      }
-    };
-  }, []);
+  // Check current schema version
+  const DATABASE_VERSION = 1;
+  const result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
+  const currentVersion = result?.user_version ?? 0;
+  console.log('Current database version:', currentVersion);
 
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1 }}>
-        <LoadingSpinner message="Loading..." />
-      </View>
-    );
+  // Development mode: reset database with sample data
+  if (SEED_DB === 'true') {
+    console.log('Development mode: resetting database with sample data...');
+    await resetDevDatabase(db);
+    await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+    console.log('Development database setup complete');
+    return;
   }
 
-  if (error) {
-    return (
-      <ErrorBoundary>
-        <View style={styles.container}>
-          <Text style={styles.errorText}>Database initialization failed</Text>
-          <Text style={styles.errorDetail}>{error.message}</Text>
-        </View>
-      </ErrorBoundary>
-    );
+  // Production mode: normal schema migration
+  if (currentVersion < DATABASE_VERSION) {
+    console.log('Migrating database to version', DATABASE_VERSION);
+    
+    // Create or update schema
+    for (const statement of schema) {
+      await db.execAsync(statement);
+    }
+
+    await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+    console.log('Migration complete');
   }
+
+  console.log('Database initialization complete');
+}
+
+/**
+ * Internal provider component that provides database context
+ */
+function DatabaseContextProvider({ children }: DatabaseProviderProps) {
+  const db = useSQLiteContext();
+
+  const forceReset = async () => {
+    console.log('Force resetting database...');
+    await resetDevDatabase(db);
+    await db.execAsync('PRAGMA user_version = 1');
+    console.log('Force reset complete');
+  };
 
   return (
-    <ErrorBoundary>
-      <DatabaseContext.Provider value={{ db }}>
-        {children}
-      </DatabaseContext.Provider>
-    </ErrorBoundary>
+    <DatabaseContext.Provider value={{ forceReset }}>
+      {children}
+    </DatabaseContext.Provider>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    color: 'red',
-    marginBottom: 10,
-  },
-  errorDetail: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-});
-
-export const useDatabase = () => {
-  const context = React.useContext(DatabaseContext);
-  if (!context) {
-    throw new Error('useDatabase must be used within a DatabaseProvider');
-  }
-  return context;
-};
+/**
+ * Main database provider that sets up SQLite and provides database context
+ */
+export function DatabaseProvider({ children }: DatabaseProviderProps) {
+  return (
+    <SQLiteProvider 
+      databaseName={DATABASE_NAME}
+      onInit={migrateDbIfNeeded}
+      useSuspense
+      children={<DatabaseContextProvider children={children} />}
+    />
+  );
+}

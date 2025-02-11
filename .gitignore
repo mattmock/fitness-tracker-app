@@ -9,6 +9,7 @@ dist/
 web-build/
 expo-env.d.ts
 /ios
+/android
 
 # Native
 *.orig.*
@@ -23,17 +24,16 @@ expo-env.d.ts
 
 # debug
 npm-debug.*
-yarn-debug.*
-yarn-error.*
 
 # macOS
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
-.env
-.env.*
+# Environment files
+.env.local
+.env.*.local
+.env.production
+.env.production.local
 
 # typescript
 *.tsbuildinfo

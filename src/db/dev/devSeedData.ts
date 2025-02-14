@@ -83,7 +83,7 @@ const EXERCISES_BY_CATEGORY = {
 
 // Generate exercises (one from each category to ensure variety)
 export const DEV_EXERCISES = EXERCISE_CATEGORIES.map((category, index) => ({
-  id: (index + 1).toString(),
+  id: faker.string.uuid(),
   name: faker.helpers.arrayElement(EXERCISES_BY_CATEGORY[category]),
   category,
   description: faker.lorem.sentence(),
@@ -118,8 +118,8 @@ const ROUTINE_TEMPLATES = [
   }
 ];
 
-export const DEV_ROUTINES = ROUTINE_TEMPLATES.map((template, index) => ({
-  id: (index + 1).toString(),
+export const DEV_ROUTINES = ROUTINE_TEMPLATES.map((template) => ({
+  id: faker.string.uuid(),
   name: template.name,
   description: template.description,
 }));
@@ -132,36 +132,57 @@ export const DEV_ROUTINE_EXERCISES = DEV_ROUTINES.flatMap((routine, routineIndex
   );
 
   return faker.helpers.arrayElements(categoryExercises, { min: 3, max: 5 })
-    .map((exercise, index) => ({
+    .map((exercise) => ({
       routineId: routine.id,
       exerciseId: exercise.id,
-      sets: faker.number.int({ min: 3, max: 5 }),
-      reps: exercise.category === 'Cardio' 
-        ? faker.number.int({ min: 20, max: 30 })  // More reps for cardio
-        : faker.number.int({ min: 8, max: 15 }),  // Standard reps for strength
-      orderIndex: index,
     }));
 });
 
-// Generate sample sessions based on the routines
-export const DEV_SAMPLE_SESSIONS = [
-  {
-    id: 'sample-1',
-    name: 'Morning Workout',
-    routineId: '1', // Full Body Strength
-    exercises: [
-      { exerciseId: '1', setNumber: 1, reps: 12 }, // Upper body exercise
-      { exerciseId: '1', setNumber: 2, reps: 10 },
-      { exerciseId: '2', setNumber: 1, reps: 15 }, // Lower body exercise
-    ]
-  },
-  {
-    id: 'sample-2',
-    name: 'Evening Session',
-    routineId: '2', // Upper Body Focus
-    exercises: [
-      { exerciseId: '1', setNumber: 1, reps: 10 },
-      { exerciseId: '3', setNumber: 1, reps: 12 },
-    ]
-  }
-]; 
+/**
+ * Generates a random past date within the specified range
+ */
+export function generatePastDate(minDays: number = 1, maxDays: number = 30): Date {
+  const daysAgo = faker.number.int({ min: minDays, max: maxDays });
+  const result = faker.date.recent({ days: daysAgo });
+  // Set a random hour between 6 AM and 9 PM
+  result.setHours(faker.number.int({ min: 6, max: 21 }), 
+                  faker.number.int({ min: 0, max: 59 }));
+  return result;
+}
+
+/**
+ * Generates a session with random exercises and realistic data
+ */
+export function generateSession(existingExercises: { id: string; category: string }[] = DEV_EXERCISES): any {
+  const startTime = generatePastDate();
+  const endTime = new Date(startTime);
+  endTime.setMinutes(endTime.getMinutes() + faker.number.int({ min: 30, max: 90 }));
+
+  const sessionExercises = faker.helpers.arrayElements(existingExercises, { min: 2, max: 6 })
+    .map((exercise, index) => {
+      const isCardio = exercise.category === 'Cardio';
+      const isMobility = exercise.category === 'Mobility';
+      
+      return {
+        exerciseId: exercise.id,
+        setNumber: index + 1,
+        reps: isCardio ? faker.number.int({ min: 20, max: 50 }) :
+              isMobility ? null : faker.number.int({ min: 8, max: 15 }),
+        weight: isCardio || isMobility ? null : faker.number.int({ min: 10, max: 100 }),
+        duration: isCardio ? faker.number.int({ min: 30, max: 300 }) :
+                 isMobility ? faker.number.int({ min: 30, max: 60 }) : null,
+        notes: faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.3 })
+      };
+    });
+
+  return {
+    id: faker.string.uuid(),
+    name: `${faker.date.weekday()} Workout`,
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    exercises: sessionExercises
+  };
+}
+
+// Generate initial sample sessions
+export const DEV_SAMPLE_SESSIONS = Array.from({ length: 2 }, () => generateSession()); 

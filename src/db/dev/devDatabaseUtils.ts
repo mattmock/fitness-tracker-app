@@ -4,139 +4,198 @@
  * They should not be included in production builds.
  */
 
-import { SQLiteDatabase } from 'expo-sqlite';
-import { schema } from '../database';
-import { DEV_EXERCISES, DEV_ROUTINES, DEV_ROUTINE_EXERCISES, DEV_SAMPLE_SESSIONS } from './devSeedData';
+import { SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
+import { schema } from '../schema/schema';
+import { 
+  TableName, 
+  DatabaseCounts,
+  formatDateForSQLite 
+} from './utils/devCommonUtils';
+import {
+  DEV_EXERCISES,
+  Exercise,
+  addExercises,
+  ensureMinimumExercises
+} from './utils/devExerciseUtils';
+import {
+  DEV_ROUTINES,
+  DEV_ROUTINE_EXERCISES,
+  Routine,
+  RoutineExercise,
+  addRoutines,
+  addRoutineExercises
+} from './utils/devRoutineUtils';
+import {
+  DevSession as Session,
+  DevSessionExercise as SessionExercise,
+  addSessions
+} from './utils/devSessionUtils';
 
 /**
- * Formats a date for SQLite (YYYY-MM-DD HH:MM:SS)
+ * Hook that provides development database operations
  */
-function formatDateForSQLite(date: Date): string {
-  return date.toISOString().replace('T', ' ').split('.')[0];
+export function useDevDatabase() {
+  const db = useSQLiteContext();
+
+  return {
+    clearDatabase: () => clearDatabase(db),
+    clearTable: (table: TableName) => clearTable(db, table),
+    updateRowCount: (table: TableName, count: number) => updateRowCount(db, table, count),
+    resetDatabaseToDefault: () => resetDatabaseToDefault(db),
+    getCounts: () => getDatabaseCounts(db),
+  };
 }
 
 /**
- * Clears all tables from the development database
+ * Gets the current count of rows in each table
  */
-export async function clearDevDatabase(db: SQLiteDatabase) {
-  console.log('[Dev] Starting database clear process...');
+async function getDatabaseCounts(db: SQLiteDatabase): Promise<DatabaseCounts> {
+  console.log('[Dev] Fetching database counts...');
   
-  const tables = ['session_exercises', 'routine_exercises', 'sessions', 'routines', 'exercises'];
-  
-  // Drop all tables
-  for (const table of tables) {
-    console.log(`[Dev] Dropping table: ${table}`);
-    await db.execAsync(`DROP TABLE IF EXISTS ${table};`);
-  }
-  console.log('[Dev] All tables dropped successfully');
-
-  // Recreate schema
-  console.log('[Dev] Recreating schema...');
-  for (const statement of schema) {
-    try {
-      await db.execAsync(statement);
-    } catch (error) {
-      console.error('[Dev] Error executing schema statement:', error);
-      throw error;
-    }
-  }
-
-  // Verify tables
-  console.log('[Dev] Verifying table creation...');
-  for (const table of tables) {
-    const result = await db.getFirstAsync<{count: number}>(
-      `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='${table}'`
-    );
-    console.log(`[Dev] Table ${table} exists:`, result?.count === 1);
-    if (result?.count !== 1) {
-      throw new Error(`[Dev] Failed to create table: ${table}`);
-    }
-  }
-
-  console.log('[Dev] Database clear process complete');
-}
-
-/**
- * Seeds the development database with sample data
- */
-export async function seedDevDatabase(db: SQLiteDatabase) {
-  console.log('[Dev] Seeding development data...');
-
-  // Insert exercises
-  console.log('[Dev] Step 1: Inserting exercises...');
-  for (const exercise of DEV_EXERCISES) {
-    await db.execAsync(`
-      INSERT INTO exercises (id, name, category, description, created_at) 
-      VALUES ('${exercise.id}', '${exercise.name}', '${exercise.category}', '${exercise.description}', datetime('now'))
-    `);
-  }
-
-  // Insert routines
-  console.log('[Dev] Step 2: Inserting routines...');
-  for (const routine of DEV_ROUTINES) {
-    await db.execAsync(`
-      INSERT INTO routines (id, name, description, created_at)
-      VALUES ('${routine.id}', '${routine.name}', '${routine.description}', datetime('now'))
-    `);
-  }
-
-  // Insert routine exercises
-  console.log('[Dev] Step 3: Inserting routine exercises...');
-  for (const re of DEV_ROUTINE_EXERCISES) {
-    await db.execAsync(`
-      INSERT INTO routine_exercises (routine_id, exercise_id, sets, reps, order_index, created_at)
-      VALUES ('${re.routineId}', '${re.exerciseId}', ${re.sets}, ${re.reps}, ${re.orderIndex}, datetime('now'))
-    `);
-  }
-
-  // Insert sample sessions
-  console.log('[Dev] Step 4: Inserting sample sessions...');
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const twoHoursAgo = new Date();
-  twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
-  
-  for (const session of DEV_SAMPLE_SESSIONS) {
-    const timestamp = session.id === 'sample-1' 
-      ? formatDateForSQLite(yesterday)
-      : formatDateForSQLite(twoHoursAgo);
-    
-    await db.execAsync(`
-      INSERT INTO sessions (id, name, routine_id, start_time, created_at) 
-      VALUES ('${session.id}', '${session.name}', '${session.routineId}', '${timestamp}', '${timestamp}')
-    `);
-
-    for (const exercise of session.exercises) {
-      await db.execAsync(`
-        INSERT INTO session_exercises (session_id, exercise_id, set_number, reps, created_at)
-        VALUES ('${session.id}', '${exercise.exerciseId}', ${exercise.setNumber}, ${exercise.reps}, '${timestamp}')
-      `);
-    }
-  }
-
-  // Verify data
-  const counts = await Promise.all([
-    db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM exercises'),
-    db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM routines'),
-    db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM routine_exercises'),
+  const [sessions, exercises, routines] = await Promise.all([
     db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM sessions'),
-    db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM session_exercises')
+    db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM exercises'),
+    db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM routines')
   ]);
 
-  console.log('[Dev] Final Database State:');
-  console.log(`[Dev] - Exercises: ${counts[0]?.count ?? 0}`);
-  console.log(`[Dev] - Routines: ${counts[1]?.count ?? 0}`);
-  console.log(`[Dev] - Routine Exercises: ${counts[2]?.count ?? 0}`);
-  console.log(`[Dev] - Sessions: ${counts[3]?.count ?? 0}`);
-  console.log(`[Dev] - Session Exercises: ${counts[4]?.count ?? 0}`);
+  const counts = {
+    sessions: sessions?.count ?? 0,
+    exercises: exercises?.count ?? 0,
+    routines: routines?.count ?? 0
+  };
 
-  console.log('[Dev] Development seeding complete');
+  console.log('[Dev] Current database counts:', counts);
+  return counts;
 }
 
 /**
- * Resets the development database to its initial state
+ * Clears all data from all tables
  */
-export async function resetDevDatabase(db: SQLiteDatabase) {
-  await clearDevDatabase(db);
-  await seedDevDatabase(db);
-} 
+async function clearDatabase(db: SQLiteDatabase): Promise<void> {
+  console.log('[Dev] Clearing all database tables...');
+  
+  // Order matters due to foreign key constraints
+  const tables: TableName[] = [
+    'session_exercises',
+    'routine_exercises',
+    'sessions',
+    'routines',
+    'exercises'
+  ];
+  
+  for (const table of tables) {
+    await clearTable(db, table);
+  }
+  
+  console.log('[Dev] Database cleared successfully');
+}
+
+/**
+ * Clears all data from a specific table
+ */
+async function clearTable(db: SQLiteDatabase, table: TableName): Promise<void> {
+  console.log(`[Dev] Clearing table: ${table}`);
+  await db.execAsync(`DELETE FROM ${table}`);
+  console.log(`[Dev] Table ${table} cleared successfully`);
+}
+
+/**
+ * Updates the number of rows in a table to match the specified count
+ */
+async function updateRowCount(db: SQLiteDatabase, table: TableName, targetCount: number): Promise<void> {
+  if (targetCount < 0) {
+    throw new Error(`Count cannot be negative for table: ${table}`);
+  }
+
+  console.log(`[Dev] Updating ${table} count to ${targetCount}...`);
+  
+  // Get current count
+  const result = await db.getFirstAsync<{count: number}>(`SELECT COUNT(*) as count FROM ${table}`);
+  const currentCount = result?.count ?? 0;
+  
+  if (currentCount === targetCount) {
+    console.log(`[Dev] ${table} already has ${targetCount} rows`);
+    return;
+  }
+  
+  if (currentCount < targetCount) {
+    await addRows(db, table, targetCount - currentCount);
+  } else {
+    await subtractRows(db, table, currentCount - targetCount);
+  }
+  
+  console.log(`[Dev] ${table} count updated successfully`);
+}
+
+/**
+ * Adds the specified number of rows to a table
+ */
+async function addRows(db: SQLiteDatabase, table: TableName, count: number): Promise<void> {
+  console.log(`[Dev] Adding ${count} rows to ${table}...`);
+  
+  switch (table) {
+    case 'exercises':
+      await addExercises(db, count);
+      break;
+      
+    case 'routines':
+      await addRoutines(db, count);
+      break;
+      
+    case 'sessions': {
+      const exercises = await ensureMinimumExercises(db);
+      await addSessions(db, count, exercises);
+      break;
+    }
+      
+    default:
+      throw new Error(`Adding rows not supported for table: ${table}`);
+  }
+  
+  console.log(`[Dev] Added ${count} rows to ${table}`);
+}
+
+/**
+ * Removes the specified number of rows from a table
+ */
+async function subtractRows(db: SQLiteDatabase, table: TableName, count: number): Promise<void> {
+  console.log(`[Dev] Removing ${count} rows from ${table}...`);
+  
+  await db.execAsync(`
+    DELETE FROM ${table} 
+    WHERE rowid IN (
+      SELECT rowid FROM ${table} 
+      ORDER BY rowid DESC 
+      LIMIT ${count}
+    )
+  `);
+  
+  console.log(`[Dev] Removed ${count} rows from ${table}`);
+}
+
+/**
+ * Resets the database to its default state
+ */
+async function resetDatabaseToDefault(db: SQLiteDatabase): Promise<void> {
+  console.log('[Dev] Resetting database to default state...');
+  
+  // Clear all data
+  await clearDatabase(db);
+  
+  // Recreate schema if needed
+  for (const statement of schema.statements) {
+    await db.execAsync(statement);
+  }
+  
+  // Add default data in bulk
+  await Promise.all([
+    addExercises(db, DEV_EXERCISES.length, DEV_EXERCISES),
+    addRoutines(db, DEV_ROUTINES.length, DEV_ROUTINES),
+    addRoutineExercises(db, DEV_ROUTINE_EXERCISES)
+  ]);
+  
+  console.log('[Dev] Database reset complete');
+}
+
+// Export resetDatabaseToDefault for use in provider
+export { resetDatabaseToDefault as resetDevDatabase }; 

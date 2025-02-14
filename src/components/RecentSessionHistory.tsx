@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { Session } from '../db/models';
+import type { Session } from '../db/services/sessionService';
 import { format } from 'date-fns';
-import { useWorkoutData } from '../services';
+import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomSheet } from './PastSessionBottomSheet/BottomSheetContext';
 
@@ -13,7 +13,7 @@ interface RecentSessionHistoryProps {
 export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
   const displayedSessions = sessions.slice(0, 6);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
-  const { exerciseService } = useWorkoutData();
+  const { exerciseService } = useDatabaseContext();
   const [exerciseNames, setExerciseNames] = useState<Record<string, string>>({});
   const bottomSheet = useBottomSheet();
 
@@ -21,7 +21,7 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
   useEffect(() => {
     if (expandedSessionId) {
       const fetchExerciseNames = async () => {
-        const exercises = await exerciseService.getExercises();
+        const exercises = await exerciseService.getAll();
         const names: Record<string, string> = {};
         exercises.forEach(exercise => {
           names[exercise.id] = exercise.name;
@@ -32,13 +32,15 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
     }
   }, [expandedSessionId, exerciseService]);
 
-  const renderExerciseItem = (sessionExercise: any) => {
-    const exerciseName = exerciseNames[sessionExercise.exerciseId] || 'Loading...';
+  const renderExerciseItem = (exercise: Session['exercises'][0]) => {
+    const exerciseName = exerciseNames[exercise.exerciseId] || 'Loading...';
     return (
-      <View style={styles.exerciseItem} key={sessionExercise.id}>
+      <View style={styles.exerciseItem} key={exercise.id}>
         <Text style={styles.exerciseName}>{exerciseName}</Text>
         <Text style={styles.exerciseDetails}>
-          {sessionExercise.sets} sets × {sessionExercise.reps} reps
+          {exercise.setNumber} sets {exercise.reps ? `× ${exercise.reps} reps` : ''}
+          {exercise.weight ? ` @ ${exercise.weight}kg` : ''}
+          {exercise.duration ? ` for ${exercise.duration}s` : ''}
         </Text>
       </View>
     );
@@ -63,7 +65,7 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
           </View>
           <View style={styles.sessionSummary}>
             <Text style={styles.exerciseCount}>
-              {item.sessionExercises.length} exercise{item.sessionExercises.length !== 1 ? 's' : ''}
+              {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
             </Text>
             <Ionicons 
               name={isExpanded ? "chevron-up" : "chevron-down"} 
@@ -75,7 +77,7 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
         
         {isExpanded && (
           <View style={styles.exerciseList}>
-            {item.sessionExercises.map(renderExerciseItem)}
+            {item.exercises.map(renderExerciseItem)}
           </View>
         )}
       </TouchableOpacity>

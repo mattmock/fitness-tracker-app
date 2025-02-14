@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, FlatList } from 'react-native';
 import { LoadingSpinner, BackButton, ExerciseTypeCard } from '../components';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useWorkoutData } from '../services';
-import { Exercise, Routine } from '../db/models';
+import { useDatabaseContext } from '../db';
+import type { Exercise } from '../db/services/exerciseService';
+import type { Routine } from '../db/services/routineService';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
@@ -21,15 +22,15 @@ export function ExerciseLibraryScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('exercises');
-  const { exerciseService } = useWorkoutData();
+  const { exerciseService, routineService } = useDatabaseContext();
   const navigation = useNavigation<NavigationProp>();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [exercisesData, routinesData] = await Promise.all([
-          exerciseService.getExercises(),
-          exerciseService.getRoutines()
+          exerciseService.getAll(),
+          routineService.getAll()
         ]);
         setExercises(exercisesData);
         setRoutines(routinesData);
@@ -41,7 +42,7 @@ export function ExerciseLibraryScreen() {
     };
 
     fetchData();
-  }, [exerciseService]);
+  }, [exerciseService, routineService]);
 
   const getExercisesByGroup = (): ExerciseGroup[] => {
     const groups = new Map<string, Exercise[]>();

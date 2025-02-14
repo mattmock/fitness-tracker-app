@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Session } from '../db/models';
-import { useWorkoutData } from '../services';
+import { useDatabaseContext } from '../db';
+import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../db/services/sessionService';
+import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../db/models';
 import { ActiveSession } from '../components/ActiveSession';
 import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet/index';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -14,11 +15,31 @@ import { RecentSessionHistory } from '../components/RecentSessionHistory';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
+// Transform service exercise to model exercise
+function transformExercise(exercise: ServiceSessionExercise): ModelSessionExercise {
+  return {
+    ...exercise,
+    sets: exercise.setNumber, // Use setNumber as sets
+    reps: exercise.reps || 0, // Default to 0 if not set
+    completed: true, // Assume completed since these are past exercises
+    updatedAt: exercise.createdAt
+  };
+}
+
+// Transform service session to model session
+function transformSession(session: ServiceSession): ModelSession {
+  return {
+    ...session,
+    sessionExercises: session.exercises.map(transformExercise),
+    updatedAt: session.createdAt
+  };
+}
+
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const [activeSession, setActiveSession] = useState<Session | null>(null);
-  const [pastSessions, setPastSessions] = useState<Session[]>([]);
-  const { exerciseService } = useWorkoutData();
+  const [activeSession, setActiveSession] = useState<ModelSession | null>(null);
+  const [pastSessions, setPastSessions] = useState<ModelSession[]>([]);
+  const { sessionService } = useDatabaseContext();
 
   // Calculate snap points based on session count
   const snapPoints = React.useMemo(() => {
@@ -34,7 +55,7 @@ export function HomeScreen() {
     React.useCallback(() => {
       const fetchSessions = async () => {
         try {
-          const sessions = await exerciseService.getSessions();
+          const sessions = await sessionService.getAll();
           console.log('Fetched sessions:', sessions);
           
           const today = new Date().toISOString().split('T')[0];
@@ -49,19 +70,19 @@ export function HomeScreen() {
           console.log('Past sessions:', pastSessions.length);
 
           if (todaysSessions.length > 0) {
-            setActiveSession(todaysSessions[todaysSessions.length - 1]);
+            setActiveSession(transformSession(todaysSessions[todaysSessions.length - 1]));
           } else {
             setActiveSession(null);
           }
 
-          setPastSessions(pastSessions);
+          setPastSessions(pastSessions.map(transformSession));
         } catch (error) {
           console.error('Error fetching sessions:', error);
         }
       };
 
       fetchSessions();
-    }, [exerciseService])
+    }, [sessionService])
   );
 
   const handleAddExercise = () => {

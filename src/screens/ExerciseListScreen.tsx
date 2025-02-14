@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '../components';
-import { Exercise } from '../db/models';
+import type { Exercise } from '../db/services/exerciseService';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { useWorkoutData } from '../services';
+import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
 
 type ExerciseListScreenProps = NativeStackScreenProps<RootStackParamList, 'ExerciseList'>;
@@ -13,7 +13,7 @@ type ExerciseListScreenProps = NativeStackScreenProps<RootStackParamList, 'Exerc
 export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProps) {
   const { category, exercises } = route.params;
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
-  const { exerciseService } = useWorkoutData();
+  const { sessionService } = useDatabaseContext();
 
   const toggleExerciseSelection = (exerciseId: string) => {
     const newSelection = new Set(selectedExercises);
@@ -48,14 +48,20 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
       }
 
       console.log('Creating session with exercises:', selectedExercisesList);
-      const session = await exerciseService.createSessionWithExercises(selectedExercisesList);
-      console.log('Session created:', session);
       
-      // Navigate back to home screen
+      // Create a new session with the selected exercises
+      const session = await sessionService.create({
+        name: `Workout ${new Date().toLocaleDateString()}`,
+        startTime: new Date().toISOString(),
+      }, selectedExercisesList.map(exercise => ({
+        exerciseId: exercise.id,
+        setNumber: 1,
+      })));
+
+      console.log('Session created:', session);
       navigation.navigate('Home');
     } catch (error) {
       console.error('Failed to create session:', error);
-      // TODO: Show error toast/alert
     }
   };
 

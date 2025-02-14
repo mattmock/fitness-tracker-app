@@ -2,11 +2,11 @@ import React, { Suspense, PropsWithChildren } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { DatabaseProvider } from './src/db/DatabaseProvider';
+import { DatabaseProvider } from './src/db';
 import { NavigationContainer } from '@react-navigation/native';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { WorkoutDataServiceProvider } from './src/services';
+import { ConfigProvider } from './src/config/ConfigProvider';
 
 function Fallback() {
   return (
@@ -33,11 +33,13 @@ function AppProviders({ children }: PropsWithChildren) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        <DatabaseProvider children={
-          <Suspense fallback={<Fallback />}>
-            <WorkoutDataServiceProvider children={children} />
-          </Suspense>
-        } />
+        <ConfigProvider>
+          <DatabaseProvider children={
+            <Suspense fallback={<Fallback />}>
+              {children}
+            </Suspense>
+          } />
+        </ConfigProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

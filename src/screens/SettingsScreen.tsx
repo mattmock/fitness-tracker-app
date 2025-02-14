@@ -1,19 +1,140 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { useSQLiteContext } from 'expo-sqlite';
-import { useDatabaseContext } from '../db/DatabaseProvider';
-import { clearDevDatabase, seedDevDatabase } from '../db/dev/devDatabaseUtils';
+import { useDevDatabase } from '../db/dev/devDatabaseUtils';
+import { BackButton } from '../components';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+interface DataCountRowProps {
+  label: string;
+  value: string;
+  onUpdate: (value: string) => void;
+}
+
+function DataCountRow({ label, value, onUpdate }: DataCountRowProps) {
+  const [inputValue, setInputValue] = useState(value);
+
+  // Update input value when prop changes
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  const handleUpdate = () => {
+    const numValue = parseInt(inputValue, 10);
+    if (isNaN(numValue)) {
+      Alert.alert('Invalid Input', 'Please enter a valid number');
+      setInputValue(value); // Reset to previous valid value
+      return;
+    }
+
+    if (numValue < 0) {
+      Alert.alert('Invalid Input', 'Number cannot be negative');
+      setInputValue(value); // Reset to previous valid value
+      return;
+    }
+    
+    console.log(`Updating ${label} count to:`, numValue); // Debug log
+    onUpdate(numValue.toString());
+  };
+
+  const handleChangeText = (text: string) => {
+    // Only allow non-negative numbers (no minus sign)
+    if (/^\d*$/.test(text)) {
+      setInputValue(text);
+    }
+  };
+
+  return (
+    <View style={styles.dataCountRow}>
+      <Text style={styles.dataCountLabel}>{label}:</Text>
+      <View style={styles.dataCountInput}>
+        <TextInput
+          style={styles.input}
+          value={inputValue}
+          onChangeText={handleChangeText}
+          keyboardType="numeric"
+          maxLength={3} // Prevent unreasonably large numbers
+          returnKeyType="done"
+          onSubmitEditing={handleUpdate}
+        />
+        <TouchableOpacity
+          style={[
+            styles.updateButton,
+            (!inputValue || inputValue === value) && styles.updateButtonDisabled
+          ]}
+          onPress={handleUpdate}
+          disabled={!inputValue || inputValue === value}
+        >
+          <Text style={styles.updateButtonText}>Update</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const db = useSQLiteContext();
-  const { forceReset } = useDatabaseContext();
+  const devDb = useDevDatabase();
+  
+  const [counts, setCounts] = useState({
+    sessions: '0',
+    exercises: '0',
+    routines: '0'
+  });
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Fetch current counts from database
+  const fetchCounts = async () => {
+    try {
+      console.log('Fetching database counts...');
+      const dbCounts = await devDb.getCounts();
+      console.log('Received counts:', dbCounts);
+      setCounts({
+        sessions: dbCounts.sessions.toString(),
+        exercises: dbCounts.exercises.toString(),
+        routines: dbCounts.routines.toString()
+      });
+    } catch (error) {
+      console.error('Failed to fetch counts:', error);
+      Alert.alert('Error', 'Failed to fetch database counts');
+    }
+  };
+
+  // Fetch counts on mount
+  useEffect(() => {
+    fetchCounts();
+  }, []);
+
+  const handleUpdateCount = async (type: keyof typeof counts, value: string) => {
+    if (isUpdating) return;
+    
+    try {
+      console.log(`Updating ${type} count to ${value}...`);
+      setIsUpdating(true);
+      
+      const numValue = parseInt(value, 10);
+      if (isNaN(numValue)) {
+        throw new Error('Invalid number');
+      }
+
+      // Update the count for the specific table
+      await devDb.updateRowCount(type, numValue);
+      
+      console.log('Update complete, refreshing counts...');
+      await fetchCounts();
+      
+      Alert.alert('Success', `${type} count updated successfully`);
+    } catch (error) {
+      console.error(`Failed to update ${type} count:`, error);
+      Alert.alert('Error', `Failed to update ${type} count`);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleClearDatabase = () => {
     Alert.alert(
@@ -29,8 +150,9 @@ export function SettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await clearDevDatabase(db);
-              navigation.goBack();
+              await devDb.clearDatabase();
+              await fetchCounts();
+              Alert.alert('Success', 'Database cleared successfully');
             } catch (error) {
               console.error('Failed to clear database:', error);
               Alert.alert('Error', 'Failed to clear database');
@@ -41,56 +163,10 @@ export function SettingsScreen() {
     );
   };
 
-  const handleReseedDatabase = () => {
+  const handleResetDatabase = () => {
     Alert.alert(
-      'Reseed Database',
-      'This will clear the current data and add fresh seed data. Continue?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Reseed',
-          onPress: async () => {
-            try {
-              console.log('Starting database reseed process...');
-              console.log('Step 1: Clearing database...');
-              await clearDevDatabase(db);
-              console.log('Database cleared successfully');
-              
-              console.log('Step 2: Seeding database with initial data...');
-              await seedDevDatabase(db);
-              console.log('Database seeded successfully');
-              
-              console.log('Database reseed process completed');
-              
-              // Show success message and delay navigation
-              Alert.alert(
-                'Success',
-                'Database has been reseeded successfully',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => navigation.goBack()
-                  }
-                ]
-              );
-            } catch (error) {
-              console.error('Failed to reseed database:', error);
-              console.error('Error details:', JSON.stringify(error, null, 2));
-              Alert.alert('Error', 'Failed to reseed database. Check console for details.');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleForceReset = () => {
-    Alert.alert(
-      'Force Reset Database',
-      'This will reset the database to its initial state based on your environment settings. Continue?',
+      'Reset Database',
+      'This will reset the database to its default state with sample data. Continue?',
       [
         {
           text: 'Cancel',
@@ -98,14 +174,23 @@ export function SettingsScreen() {
         },
         {
           text: 'Reset',
-          style: 'destructive',
           onPress: async () => {
             try {
-              await forceReset();
-              navigation.goBack();
+              console.log('Starting database reset...');
+              await devDb.resetDatabaseToDefault();
+              console.log('Database reset completed');
+              
+              await fetchCounts();
+              
+              Alert.alert(
+                'Success',
+                'Database has been reset successfully',
+                [{ text: 'OK' }]
+              );
             } catch (error) {
               console.error('Failed to reset database:', error);
-              Alert.alert('Error', 'Failed to reset database');
+              console.error('Error details:', JSON.stringify(error, null, 2));
+              Alert.alert('Error', 'Failed to reset database. Check console for details.');
             }
           },
         },
@@ -115,8 +200,32 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.title}>Settings</Text>
+      <View style={styles.header}>
+        <BackButton />
+        <Text style={styles.title}>Settings</Text>
+      </View>
       
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Database Row Counts</Text>
+        <View style={styles.dataCountsContainer}>
+          <DataCountRow
+            label="Past Sessions"
+            value={counts.sessions}
+            onUpdate={(value) => handleUpdateCount('sessions', value)}
+          />
+          <DataCountRow
+            label="Exercises"
+            value={counts.exercises}
+            onUpdate={(value) => handleUpdateCount('exercises', value)}
+          />
+          <DataCountRow
+            label="Routines"
+            value={counts.routines}
+            onUpdate={(value) => handleUpdateCount('routines', value)}
+          />
+        </View>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Database Controls</Text>
         <View style={styles.databaseControls}>
@@ -129,16 +238,9 @@ export function SettingsScreen() {
 
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}
-            onPress={handleReseedDatabase}
+            onPress={handleResetDatabase}
           >
-            <Text style={[styles.buttonText, styles.primaryButtonText]}>Reseed Database</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.button, styles.warningButton]}
-            onPress={handleForceReset}
-          >
-            <Text style={styles.buttonText}>Force Reset Database</Text>
+            <Text style={[styles.buttonText, styles.primaryButtonText]}>Reset Database</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -152,10 +254,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 16,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
-    marginBottom: 24,
+    marginLeft: 16,
   },
   section: {
     marginBottom: 24,
@@ -165,6 +272,43 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
     marginTop: 24,
+  },
+  dataCountsContainer: {
+    gap: 12,
+  },
+  dataCountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dataCountLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  dataCountInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 8,
+    width: 60,
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  updateButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  updateButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   databaseControls: {
     marginTop: 16,
@@ -192,4 +336,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
   },
-}); 
+  updateButtonDisabled: {
+    opacity: 0.5,
+  },
+});

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { LoadingSpinner, BackButton, ExerciseTypeCard } from '../components';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDatabaseContext } from '../db';
@@ -129,12 +129,12 @@ export function ExerciseLibraryScreen() {
         />
       </View>
       <View style={styles.tabContainer}>
-        <View 
+        <TouchableOpacity 
           style={[
             styles.tab, 
             activeTab === 'exercises' && styles.activeTab
           ]}
-          onTouchEnd={() => setActiveTab('exercises')}
+          onPress={() => setActiveTab('exercises')}
         >
           <Text style={[
             styles.tabText,
@@ -142,13 +142,13 @@ export function ExerciseLibraryScreen() {
           ]}>
             Exercises
           </Text>
-        </View>
-        <View 
+        </TouchableOpacity>
+        <TouchableOpacity 
           style={[
             styles.tab,
             activeTab === 'routines' && styles.activeTab
           ]}
-          onTouchEnd={() => setActiveTab('routines')}
+          onPress={() => setActiveTab('routines')}
         >
           <Text style={[
             styles.tabText,
@@ -156,7 +156,7 @@ export function ExerciseLibraryScreen() {
           ]}>
             Routines
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
       <View style={styles.content}>
         {renderTabContent()}

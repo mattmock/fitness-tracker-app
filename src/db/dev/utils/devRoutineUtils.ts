@@ -17,6 +17,12 @@ export interface Routine {
 export interface RoutineExercise {
   routineId: string;
   exerciseId: string;
+  sets: number;
+  reps: number;
+  weight?: number;
+  duration?: number;
+  notes?: string;
+  orderIndex: number;
 }
 
 export interface RoutineTemplate {
@@ -74,9 +80,15 @@ export function generateRoutineExercises(routines: Routine[], exercises: Exercis
     );
 
     return faker.helpers.arrayElements(categoryExercises, { min: 3, max: 5 })
-      .map((exercise): RoutineExercise => ({
+      .map((exercise, index): RoutineExercise => ({
         routineId: routine.id,
         exerciseId: exercise.id,
+        sets: faker.number.int({ min: 2, max: 5 }),
+        reps: faker.number.int({ min: 8, max: 15 }),
+        weight: Math.random() > 0.3 ? faker.number.int({ min: 5, max: 100 }) : undefined,
+        duration: Math.random() > 0.7 ? faker.number.int({ min: 30, max: 300 }) : undefined,
+        notes: Math.random() > 0.8 ? faker.lorem.sentence() : undefined,
+        orderIndex: index
       }));
   });
 }
@@ -112,10 +124,18 @@ export async function insertRoutineExercise(db: SQLiteDatabase, data: RoutineExe
   const timestamp = new Date().toISOString();
   
   await db.runAsync(
-    'INSERT INTO routine_exercises (routine_id, exercise_id, created_at) VALUES (?, ?, ?)',
+    `INSERT INTO routine_exercises (
+      routine_id, exercise_id, sets, reps, weight, duration, notes, order_index, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.routineId,
       data.exerciseId,
+      data.sets,
+      data.reps,
+      data.weight || null,
+      data.duration || null,
+      data.notes || null,
+      data.orderIndex,
       timestamp
     ]
   );
@@ -152,6 +172,18 @@ export async function addRoutines(db: SQLiteDatabase, count: number, existingRou
     INSERT INTO routines (id, name, description, created_at)
     VALUES ${values}
   `);
+
+  // Check for existing exercises and add them to routines if they exist
+  const existingExercises = await db.getAllAsync<Exercise>(
+    'SELECT id, name, category, description FROM exercises'
+  );
+
+  if (existingExercises && existingExercises.length > 0) {
+    const routineExercises = generateRoutineExercises(routines, existingExercises);
+    if (routineExercises.length > 0) {
+      await addRoutineExercises(db, routineExercises);
+    }
+  }
 }
 
 /**
@@ -167,12 +199,20 @@ export async function addRoutineExercises(db: SQLiteDatabase, relationships: Rou
     `(${[
       `'${rel.routineId}'`,
       `'${rel.exerciseId}'`,
+      rel.sets,
+      rel.reps,
+      rel.weight !== undefined ? rel.weight : 'NULL',
+      rel.duration !== undefined ? rel.duration : 'NULL',
+      rel.notes !== undefined ? `'${rel.notes}'` : 'NULL',
+      rel.orderIndex,
       `'${timestamp}'`
     ].join(', ')})`
   ).join(',\n');
 
   await db.execAsync(`
-    INSERT INTO routine_exercises (routine_id, exercise_id, created_at)
+    INSERT INTO routine_exercises (
+      routine_id, exercise_id, sets, reps, weight, duration, notes, order_index, created_at
+    )
     VALUES ${values}
   `);
 } 

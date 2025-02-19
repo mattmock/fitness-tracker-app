@@ -17,7 +17,8 @@ import type { Exercise } from '../devExerciseUtils';
 // Mock the database
 const mockDb = {
   runAsync: jest.fn(),
-  execAsync: jest.fn()
+  execAsync: jest.fn(),
+  getAllAsync: jest.fn().mockResolvedValue([])
 };
 
 // Mock generateId

@@ -35,6 +35,28 @@ function transformSession(session: ServiceSession): ModelSession {
   };
 }
 
+export function transformModelToServiceSession(session: ModelSession): ServiceSession {
+  return {
+    id: session.id,
+    routineId: session.routineId,
+    name: 'Workout Session',
+    startTime: session.startTime,
+    endTime: session.endTime,
+    createdAt: session.createdAt,
+    exercises: session.sessionExercises.map(ex => ({
+      id: ex.id,
+      sessionId: ex.sessionId,
+      exerciseId: ex.exerciseId,
+      setNumber: ex.sets,
+      reps: ex.reps,
+      weight: ex.weight,
+      duration: undefined,
+      notes: ex.notes,
+      createdAt: ex.createdAt
+    }))
+  };
+}
+
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [activeSession, setActiveSession] = useState<ModelSession | null>(null);
@@ -141,7 +163,7 @@ export function HomeScreen() {
         </View>
         {pastSessions.length > 0 && (
           <PastSessionBottomSheet initialSnapPoints={snapPoints}>
-            <RecentSessionHistory sessions={pastSessions} />
+            <RecentSessionHistory sessions={pastSessions.map(transformModelToServiceSession)} />
           </PastSessionBottomSheet>
         )}
       </View>

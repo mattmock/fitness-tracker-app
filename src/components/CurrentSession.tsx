@@ -16,7 +16,7 @@ export function CurrentSession({ activeSession, onAddExercise }: CurrentSessionP
           Tap Add Exercise to start your workout
         </Text>
         <Image 
-          source={require('../../assets/images/empty-current-session-background.jpeg')}
+          source={require('../../assets/images/dumbbells1.png')}
           style={styles.placeholderImage}
         />
         <TouchableOpacity 
@@ -44,7 +44,6 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
     maxHeight: '60%',
   },
   placeholderText: {

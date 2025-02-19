@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDatabaseContext } from '../db';
 import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../db/services/sessionService';
 import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../db/models';
-import { ActiveSession } from '../components/ActiveSession';
+import { CurrentSession } from '../components/CurrentSession';
 import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet/index';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -111,35 +111,6 @@ export function HomeScreen() {
     navigation.navigate('ExerciseLibrary');
   };
 
-  const renderCurrentSession = () => {
-    if (!activeSession) {
-      return (
-        <View style={styles.emptySession}>
-          <Text style={styles.placeholderText}>
-            Tap Add Exercise to start your workout
-          </Text>
-          <Image 
-            source={require('../../assets/images/empty-current-session-background.jpeg')}
-            style={styles.placeholderImage}
-          />
-          <TouchableOpacity 
-            style={styles.addExerciseButton}
-            onPress={handleAddExercise}
-          >
-            <Text style={styles.addExerciseText}>Add Exercise</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <ActiveSession 
-        session={activeSession}
-        onAddExercise={handleAddExercise}
-      />
-    );
-  };
-
   return (
     <BottomSheetModalProvider>
       <View style={styles.container}>
@@ -158,7 +129,10 @@ export function HomeScreen() {
             </View>
           </SafeAreaView>
           <View style={styles.currentSession}>
-            {renderCurrentSession()}
+            <CurrentSession 
+              activeSession={activeSession}
+              onAddExercise={handleAddExercise}
+            />
           </View>
         </View>
         {pastSessions.length > 0 && (
@@ -194,51 +168,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     zIndex: 0,
-  },
-  emptySession: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 16,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    maxHeight: '60%',
-  },
-  placeholderText: {
-    color: '#9CA3AF',
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 20,
-  },
-  placeholderImage: {
-    position: 'absolute',
-    width: '80%',
-    height: '50%',
-    opacity: 0.15,
-    resizeMode: 'contain',
-    alignSelf: 'center',
-    top: '25%',
-  },
-  addExerciseButton: {
-    backgroundColor: '#101112e5',
-    borderRadius: 10,
-    padding: 16,
-    alignItems: 'center',
-    width: '75%',
-    opacity: 0.9,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  addExerciseText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   headerContent: {
     flexDirection: 'row',

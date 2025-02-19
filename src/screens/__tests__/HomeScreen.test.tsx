@@ -1,8 +1,120 @@
+import React from 'react';
+import { render, waitFor } from '@testing-library/react-native';
+import { HomeScreen } from '../HomeScreen';
 import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../../db/services/sessionService';
 import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../../db/models';
 import { transformModelToServiceSession } from '../HomeScreen';
+import { CurrentSession } from '../../components/CurrentSession';
+import { PastSessionBottomSheet } from '../../components/PastSessionBottomSheet';
 
-describe('HomeScreen transform functions', () => {
+// Mock navigation
+const mockNavigate = jest.fn();
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    navigate: mockNavigate,
+  }),
+  useFocusEffect: jest.fn((callback) => callback()),
+}));
+
+// Mock database service
+const mockGetAll = jest.fn();
+jest.mock('../../db', () => ({
+  useDatabaseContext: () => ({
+    sessionService: {
+      getAll: mockGetAll,
+    },
+  }),
+}));
+
+// Mock components
+jest.mock('../../components/CurrentSession', () => ({
+  CurrentSession: jest.fn(() => null),
+}));
+
+jest.mock('../../components/PastSessionBottomSheet', () => ({
+  PastSessionBottomSheet: jest.fn(() => null),
+}));
+
+describe('HomeScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetAll.mockResolvedValue([]);
+  });
+
+  describe('Component Integration', () => {
+    it('renders without crashing', async () => {
+      render(<HomeScreen />);
+      
+      await waitFor(() => {
+        expect(mockGetAll).toHaveBeenCalled();
+      });
+    });
+
+    it('handles today\'s session correctly', async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const mockTodaySession = {
+        id: 'today-session',
+        startTime: `${today}T10:00:00Z`,
+        createdAt: `${today}T10:00:00Z`,
+        exercises: []
+      };
+
+      mockGetAll.mockResolvedValueOnce([mockTodaySession]);
+
+      render(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(CurrentSession).toHaveBeenCalledWith(
+          expect.objectContaining({
+            activeSession: expect.objectContaining({
+              id: 'today-session'
+            })
+          }),
+          expect.any(Object)
+        );
+      });
+    });
+
+    it('handles past sessions correctly', async () => {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const mockPastSession = {
+        id: 'past-session',
+        startTime: `${yesterday}T10:00:00Z`,
+        createdAt: `${yesterday}T10:00:00Z`,
+        exercises: []
+      };
+
+      mockGetAll.mockResolvedValueOnce([mockPastSession]);
+
+      render(<HomeScreen />);
+
+      await waitFor(() => {
+        expect(PastSessionBottomSheet).toHaveBeenCalledWith(
+          expect.objectContaining({
+            initialSnapPoints: expect.any(Array)
+          }),
+          expect.any(Object)
+        );
+      });
+    });
+
+    it('navigates to ExerciseLibrary when adding exercise', async () => {
+      render(<HomeScreen />);
+      
+      await waitFor(() => {
+        expect(mockGetAll).toHaveBeenCalled();
+      });
+
+      // Get the CurrentSession props
+      const currentSessionProps = (CurrentSession as jest.Mock).mock.calls[0][0];
+      
+      // Call the onAddExercise prop
+      currentSessionProps.onAddExercise();
+
+      expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary');
+    });
+  });
+
   describe('transformModelToServiceSession', () => {
     it('transforms a model session to a service session correctly', () => {
       const modelSession: ModelSession = {

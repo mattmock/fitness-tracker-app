@@ -1,11 +1,11 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { ActiveSession } from '../ActiveSession';
-import { ExerciseItem } from '../ExerciseItem';
+import { ExerciseSetGroup } from '../ExerciseSetGroup';
 
 // Mock the ExerciseItem component
-jest.mock('../ExerciseItem', () => ({
-  ExerciseItem: jest.fn(() => null)
+jest.mock('../ExerciseSetGroup', () => ({
+  ExerciseSetGroup: jest.fn(() => null)
 }));
 
 describe('ActiveSession', () => {
@@ -54,7 +54,7 @@ describe('ActiveSession', () => {
     );
 
     // Verify ExerciseItem was called with correct props
-    expect(ExerciseItem).toHaveBeenCalledWith(
+    expect(ExerciseSetGroup).toHaveBeenCalledWith(
       {
         item: {
           ...mockSession.sessionExercises[0],

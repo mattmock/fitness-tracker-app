@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Session } from '../db/models';
-import { ExerciseItem } from './ExerciseItem';
+import { ExerciseSetGroup } from './ExerciseSetGroup';
 
 interface ActiveSessionProps {
   session: Session;
@@ -22,7 +22,7 @@ export function ActiveSession({ session, onAddExercise }: ActiveSessionProps) {
         </View>
         <View style={styles.exerciseList}>
           {session.sessionExercises.map(exercise => (
-            <ExerciseItem 
+            <ExerciseSetGroup 
               key={exercise.id}
               item={{
                 ...exercise,

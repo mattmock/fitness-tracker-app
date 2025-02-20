@@ -8,9 +8,10 @@ import ExerciseSet from './ExerciseSet';
 interface ExerciseItemProps {
   item: SessionExercise;
   onExpand: (expanded: boolean) => void;
+  onOpenFullView: (exerciseId: string) => void;
 }
 
-export function ExerciseSetGroup({ item, onExpand }: ExerciseItemProps) {
+export function ExerciseSetGroup({ item, onExpand, onOpenFullView }: ExerciseItemProps) {
   const [exerciseName, setExerciseName] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
   const { exerciseService } = useDatabaseContext();
@@ -166,6 +167,12 @@ export function ExerciseSetGroup({ item, onExpand }: ExerciseItemProps) {
               </Animated.View>
             </View>
           </View>
+          <TouchableOpacity 
+            style={styles.detailsButton}
+            onPress={() => onOpenFullView(item.id)}
+          >
+            <Text style={styles.detailsLink}>Full View →</Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
       {isExpanded && (
@@ -256,5 +263,15 @@ const styles = StyleSheet.create({
   },
   checkButtonPlaceholder: {
     width: 32,  // Same as the checkButton's width (24 + 8 padding)
+  },
+  detailsButton: {
+    marginTop: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  detailsLink: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
   },
 }); 

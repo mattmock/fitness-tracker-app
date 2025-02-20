@@ -26,6 +26,7 @@ describe('ExerciseSetGroup', () => {
       createdAt: new Date().toISOString(),
     },
     onExpand: jest.fn(),
+    onOpenFullView: jest.fn(),
   };
 
   beforeEach(() => {
@@ -49,6 +50,7 @@ describe('ExerciseSetGroup', () => {
 
     expect(getByText('Bench Press')).toBeTruthy();
     expect(getByText('0 sets')).toBeTruthy();
+    expect(getByText('Full View →')).toBeTruthy();
     // Content should be collapsed initially
     expect(queryByText('Weight')).toBeNull();
     expect(queryByText('Reps')).toBeNull();
@@ -172,5 +174,19 @@ describe('ExerciseSetGroup', () => {
     // Verify completed set shows the entered values
     expect(getByText('95')).toBeTruthy();
     expect(getByText('12')).toBeTruthy();
+  });
+
+  it('calls onOpenFullView when Full View link is pressed', async () => {
+    const { getByText } = render(
+      <ExerciseSetGroup {...defaultProps} />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.press(getByText('Full View →'));
+    expect(defaultProps.onOpenFullView).toHaveBeenCalledTimes(1);
+    expect(defaultProps.onOpenFullView).toHaveBeenCalledWith(defaultProps.item.id);
   });
 }); 

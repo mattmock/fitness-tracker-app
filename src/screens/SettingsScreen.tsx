@@ -6,6 +6,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useDevDatabase } from '../db/dev/devDatabaseUtils';
 import { BackButton } from '../components';
+import { useSQLiteContext } from 'expo-sqlite';
+import { SessionService } from '../db/services';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -79,6 +81,8 @@ function DataCountRow({ label, value, onUpdate }: DataCountRowProps) {
 export function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const devDb = useDevDatabase();
+  const db = useSQLiteContext();
+  const sessionService = new SessionService(db);
   
   const [counts, setCounts] = useState({
     sessions: '0',
@@ -198,6 +202,40 @@ export function SettingsScreen() {
     );
   };
 
+  const handleClearCurrentSession = () => {
+    Alert.alert(
+      'Clear Current Session',
+      'Are you sure you want to clear the current session? This will remove all exercises from the current session.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Get all sessions and find the most recent one that hasn't ended
+              const sessions = await sessionService.getAll();
+              const currentSession = sessions.find(session => !session.endTime);
+              
+              if (currentSession) {
+                await sessionService.delete(currentSession.id);
+                Alert.alert('Success', 'Current session cleared successfully');
+              } else {
+                Alert.alert('Info', 'No active session to clear');
+              }
+            } catch (error) {
+              console.error('Failed to clear current session:', error);
+              Alert.alert('Error', 'Failed to clear current session');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -229,6 +267,13 @@ export function SettingsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Database Controls</Text>
         <View style={styles.databaseControls}>
+          <TouchableOpacity
+            style={[styles.button, styles.warningButton]}
+            onPress={handleClearCurrentSession}
+          >
+            <Text style={styles.buttonText}>Clear Current Session</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.button, styles.dangerButton]}
             onPress={handleClearDatabase}

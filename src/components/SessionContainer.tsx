@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Session as ModelSession } from '../db/models';
 import { ActiveSession } from './ActiveSession';
 
-interface CurrentSessionProps {
+interface SessionContainerProps {
   activeSession: ModelSession | null;
   onAddExercise: () => void;
 }
 
-export function CurrentSession({ activeSession, onAddExercise }: CurrentSessionProps) {
+export function SessionContainer({ activeSession, onAddExercise }: SessionContainerProps) {
   if (!activeSession) {
     return (
       <View style={styles.emptySession}>

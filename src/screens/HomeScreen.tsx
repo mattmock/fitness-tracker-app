@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDatabaseContext } from '../db';
 import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../db/services/sessionService';
 import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../db/models';
-import { CurrentSession } from '../components/CurrentSession';
+import { SessionContainer } from '../components/SessionContainer';
 import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet/index';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
@@ -128,8 +128,8 @@ export function HomeScreen() {
               </View>
             </View>
           </SafeAreaView>
-          <View style={styles.currentSession}>
-            <CurrentSession 
+          <View style={styles.sessionContainer}>
+            <SessionContainer 
               activeSession={activeSession}
               onAddExercise={handleAddExercise}
             />
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  currentSession: {
+  sessionContainer: {
     flex: 1,
     paddingHorizontal: 16,
     zIndex: 0,

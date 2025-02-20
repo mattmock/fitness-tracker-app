@@ -4,7 +4,7 @@ import { HomeScreen } from '../HomeScreen';
 import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../../db/services/sessionService';
 import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../../db/models';
 import { transformModelToServiceSession } from '../HomeScreen';
-import { CurrentSession } from '../../components/CurrentSession';
+import { SessionContainer } from '../../components/SessionContainer';
 import { PastSessionBottomSheet } from '../../components/PastSessionBottomSheet';
 
 // Mock navigation
@@ -27,8 +27,8 @@ jest.mock('../../db', () => ({
 }));
 
 // Mock components
-jest.mock('../../components/CurrentSession', () => ({
-  CurrentSession: jest.fn(() => null),
+jest.mock('../../components/SessionContainer', () => ({
+  SessionContainer: jest.fn(() => null),
 }));
 
 jest.mock('../../components/PastSessionBottomSheet', () => ({
@@ -64,7 +64,7 @@ describe('HomeScreen', () => {
       render(<HomeScreen />);
 
       await waitFor(() => {
-        expect(CurrentSession).toHaveBeenCalledWith(
+        expect(SessionContainer).toHaveBeenCalledWith(
           expect.objectContaining({
             activeSession: expect.objectContaining({
               id: 'today-session'
@@ -105,11 +105,11 @@ describe('HomeScreen', () => {
         expect(mockGetAll).toHaveBeenCalled();
       });
 
-      // Get the CurrentSession props
-      const currentSessionProps = (CurrentSession as jest.Mock).mock.calls[0][0];
+      // Get the SessionContainer props
+      const sessionContainerProps = (SessionContainer as jest.Mock).mock.calls[0][0];
       
       // Call the onAddExercise prop
-      currentSessionProps.onAddExercise();
+      sessionContainerProps.onAddExercise();
 
       expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary');
     });

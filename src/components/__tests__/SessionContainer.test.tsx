@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { CurrentSession } from '../CurrentSession';
+import { SessionContainer } from '../SessionContainer';
 import { ActiveSession } from '../ActiveSession';
 
 // Mock the ActiveSession component
@@ -11,7 +11,7 @@ jest.mock('../ActiveSession', () => ({
 // Mock the image require
 jest.mock('../../../assets/images/empty-current-session-background.jpeg', () => 'mocked-image');
 
-describe('CurrentSession', () => {
+describe('SessionContainer', () => {
   const mockOnAddExercise = jest.fn();
 
   beforeEach(() => {
@@ -20,7 +20,7 @@ describe('CurrentSession', () => {
 
   it('renders empty session state when activeSession is null', () => {
     const { getByText, getByTestId } = render(
-      <CurrentSession
+      <SessionContainer
         activeSession={null}
         onAddExercise={mockOnAddExercise}
       />
@@ -44,7 +44,7 @@ describe('CurrentSession', () => {
     };
 
     render(
-      <CurrentSession
+      <SessionContainer
         activeSession={mockSession}
         onAddExercise={mockOnAddExercise}
       />

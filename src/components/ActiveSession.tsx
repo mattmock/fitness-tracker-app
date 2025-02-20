@@ -24,7 +24,10 @@ export function ActiveSession({ session, onAddExercise }: ActiveSessionProps) {
           {session.sessionExercises.map(exercise => (
             <ExerciseItem 
               key={exercise.id}
-              item={exercise} 
+              item={{
+                ...exercise,
+                setNumber: exercise.sets
+              }} 
               onExpand={() => {}}
             />
           ))}

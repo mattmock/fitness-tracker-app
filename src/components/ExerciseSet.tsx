@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -31,6 +31,9 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
 }) => {
   const [repsInput, setRepsInput] = useState(actualReps?.toString() ?? '0');
   const [weightInput, setWeightInput] = useState(actualWeight?.toString() ?? '0');
+  
+  const weightInputRef = useRef<TextInput>(null);
+  const repsInputRef = useRef<TextInput>(null);
 
   const handleRepsInputChange = (text: string) => {
     const numericValue = text.replace(/[^0-9]/g, '');
@@ -57,8 +60,13 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
       ]}>Set {index + 1}</Text>
       <View style={styles.setInputs}>
         {isActive ? (
-          <View style={styles.setButton}>
+          <TouchableOpacity 
+            testID="input-container"
+            style={styles.setValueInput} 
+            onPress={() => weightInputRef.current?.focus()}
+          >
             <TextInput
+              ref={weightInputRef}
               style={styles.setButtonText}
               value={weightInput}
               onChangeText={handleWeightInputChange}
@@ -66,16 +74,22 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
               maxLength={3}
               selectTextOnFocus
               accessibilityRole="spinbutton"
+              accessibilityLabel={`Weight for set ${index + 1}`}
             />
-          </View>
+          </TouchableOpacity>
         ) : (
           <View style={styles.completedSetValue}>
             <Text style={styles.setButtonText}>{actualWeight ?? 0}</Text>
           </View>
         )}
         {isActive ? (
-          <View style={styles.setButton}>
+          <TouchableOpacity 
+            testID="input-container"
+            style={styles.setValueInput} 
+            onPress={() => repsInputRef.current?.focus()}
+          >
             <TextInput
+              ref={repsInputRef}
               style={styles.setButtonText}
               value={repsInput}
               onChangeText={handleRepsInputChange}
@@ -83,8 +97,9 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
               maxLength={3}
               selectTextOnFocus
               accessibilityRole="spinbutton"
+              accessibilityLabel={`Reps for set ${index + 1}`}
             />
-          </View>
+          </TouchableOpacity>
         ) : (
           <View style={styles.completedSetValue}>
             <Text style={styles.setButtonText}>{actualReps ?? 0}</Text>
@@ -141,7 +156,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  setButton: {
+  setValueInput: {
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     padding: 8,

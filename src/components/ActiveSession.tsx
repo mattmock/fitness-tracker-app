@@ -29,6 +29,7 @@ export function ActiveSession({ session, onAddExercise }: ActiveSessionProps) {
                 setNumber: exercise.sets
               }} 
               onExpand={() => {}}
+              onOpenFullView={() => {}}
             />
           ))}
           {session.sessionExercises.length === 0 && (

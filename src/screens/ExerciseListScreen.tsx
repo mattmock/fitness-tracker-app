@@ -1,68 +1,45 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '../components';
 import type { Exercise } from '../db/services/exerciseService';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
+import { useDatabaseContext } from '../db';
+import { useFocusEffect } from '@react-navigation/native';
 
 type ExerciseListScreenProps = NativeStackScreenProps<RootStackParamList, 'ExerciseList'>;
 
 export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProps) {
-  const { category, exercises } = route.params;
-  const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
-  const { sessionService } = useDatabaseContext();
+  const { category, exercises, selectedExercises: initialSelectedExercises, onExercisesSelected } = route.params;
+  const [selectedExercises, setSelectedExercises] = React.useState<Set<string>>(new Set(initialSelectedExercises));
+  const [localSelectedCount, setLocalSelectedCount] = React.useState(
+    exercises.filter(ex => initialSelectedExercises.includes(ex.id)).length
+  );
+
+  const handleBackPress = () => {
+    // Restore original selections when going back
+    onExercisesSelected(initialSelectedExercises);
+    navigation.goBack();
+  };
 
   const toggleExerciseSelection = (exerciseId: string) => {
     const newSelection = new Set(selectedExercises);
     if (newSelection.has(exerciseId)) {
       newSelection.delete(exerciseId);
+      setLocalSelectedCount(prev => prev - 1);
     } else {
       newSelection.add(exerciseId);
+      setLocalSelectedCount(prev => prev + 1);
     }
     setSelectedExercises(newSelection);
+    onExercisesSelected(Array.from(newSelection));
   };
 
-  const handleAddToSession = async () => {
-    try {
-      if (selectedExercises.size === 0) return;
-      if (!exercises || exercises.length === 0) {
-        console.error('No exercises available');
-        return;
-      }
-
-      // Create or get today's session and add exercises
-      const selectedExercisesList = exercises.filter(exercise => {
-        if (!exercise || !exercise.id) {
-          console.error('Invalid exercise:', exercise);
-          return false;
-        }
-        return selectedExercises.has(exercise.id);
-      });
-
-      if (selectedExercisesList.length === 0) {
-        console.error('No valid exercises selected');
-        return;
-      }
-
-      console.log('Creating session with exercises:', selectedExercisesList);
-      
-      // Create a new session with the selected exercises
-      const session = await sessionService.create({
-        name: `Workout ${new Date().toLocaleDateString()}`,
-        startTime: new Date().toISOString(),
-      }, selectedExercisesList.map(exercise => ({
-        exerciseId: exercise.id,
-        setNumber: 1,
-      })));
-
-      console.log('Session created:', session);
-      navigation.navigate('Home');
-    } catch (error) {
-      console.error('Failed to create session:', error);
-    }
+  const handleSelectAndGoBack = () => {
+    // Keep current selections when using the select button
+    navigation.goBack();
   };
 
   const renderExerciseCard = ({ item }: { item: Exercise }) => {
@@ -98,32 +75,36 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <BackButton />
+        <BackButton onPress={handleBackPress} />
       </View>
       <Text style={styles.title}>{category}</Text>
       <FlatList
         data={exercises}
         keyExtractor={(item) => item.id}
         renderItem={renderExerciseCard}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          localSelectedCount > 0 && styles.listContentWithButton
+        ]}
         ListEmptyComponent={
           <Text style={styles.placeholderText}>No exercises found</Text>
         }
       />
-      <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
-        <TouchableOpacity 
-          style={[
-            styles.addButton,
-            selectedExercises.size === 0 && styles.addButtonDisabled
-          ]}
-          onPress={handleAddToSession}
-          disabled={selectedExercises.size === 0}
-        >
-          <Text style={styles.addButtonText}>
-            Add to Session ({selectedExercises.size})
-          </Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      {localSelectedCount > 0 && (
+        <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={handleSelectAndGoBack}
+          >
+            <View style={styles.addButtonContent}>
+              <Text style={styles.addButtonText}>
+                Select {localSelectedCount}
+              </Text>
+              <Ionicons name="chevron-back" size={20} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
     </SafeAreaView>
   );
 }
@@ -145,6 +126,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+  },
+  listContentWithButton: {
     paddingBottom: 100, // Extra padding for the button
   },
   card: {
@@ -204,23 +187,25 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 34, // Aligns with text after checkbox
   },
+  placeholderText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: '#9CA3AF',
+    fontSize: 16,
+  },
   bottomContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'android' ? 12 : 0,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: 'transparent',
   },
   addButton: {
     backgroundColor: '#101112e5',
-    borderRadius: 10,
-    padding: 16,
-    alignItems: 'center',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
     opacity: 0.9,
     elevation: 2,
     shadowColor: '#000',
@@ -231,18 +216,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  addButtonDisabled: {
-    opacity: 0.5,
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   addButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  placeholderText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#9CA3AF',
-    fontSize: 16,
   },
 }); 

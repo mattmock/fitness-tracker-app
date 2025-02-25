@@ -630,4 +630,52 @@ describe('SessionService', () => {
       expect(mockDb.execAsync).not.toHaveBeenCalled();
     });
   });
+
+  describe('addExerciseToSession', () => {
+    it('adds exercise with all fields to session', async () => {
+      const exercise = {
+        exerciseId: 'exercise-1',
+        setNumber: 1,
+        reps: 12,
+        weight: 100,
+        notes: 'Felt strong'
+      };
+
+      await service.addExerciseToSession('session-1', exercise);
+
+      expect(mockDb.execAsync).toHaveBeenCalledWith(
+        `INSERT INTO session_exercises (session_id, exercise_id, set_number, reps, weight, duration, notes, created_at)
+       VALUES ('session-1', 'exercise-1', 1, 12, 100, NULL, 'Felt strong', '${mockDate}')`
+      );
+    });
+
+    it('adds exercise with minimal fields to session', async () => {
+      const exercise = {
+        exerciseId: 'exercise-1',
+        setNumber: 1
+      };
+
+      await service.addExerciseToSession('session-1', exercise);
+
+      expect(mockDb.execAsync).toHaveBeenCalledWith(
+        `INSERT INTO session_exercises (session_id, exercise_id, set_number, reps, weight, duration, notes, created_at)
+       VALUES ('session-1', 'exercise-1', 1, NULL, NULL, NULL, NULL, '${mockDate}')`
+      );
+    });
+
+    it('adds exercise with duration instead of reps/weight', async () => {
+      const exercise = {
+        exerciseId: 'exercise-1',
+        setNumber: 1,
+        duration: 300
+      };
+
+      await service.addExerciseToSession('session-1', exercise);
+
+      expect(mockDb.execAsync).toHaveBeenCalledWith(
+        `INSERT INTO session_exercises (session_id, exercise_id, set_number, reps, weight, duration, notes, created_at)
+       VALUES ('session-1', 'exercise-1', 1, NULL, NULL, 300, NULL, '${mockDate}')`
+      );
+    });
+  });
 }); 

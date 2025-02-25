@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { LoadingSpinner, BackButton, ExerciseTypeCard } from '../components';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDatabaseContext } from '../db';
 import type { Exercise } from '../db/services/exerciseService';
 import type { Routine } from '../db/services/routineService';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
+import { Ionicons } from '@expo/vector-icons';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -22,8 +23,40 @@ export function ExerciseLibraryScreen() {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('exercises');
-  const { exerciseService, routineService } = useDatabaseContext();
+  const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
+  const [activeSession, setActiveSession] = useState<{ id: string; name: string } | null>(null);
+  const { exerciseService, routineService, sessionService } = useDatabaseContext();
   const navigation = useNavigation<NavigationProp>();
+
+  // Fetch active session when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchActiveSession = async () => {
+        try {
+          const sessions = await sessionService.getAll();
+          const today = new Date().toISOString().split('T')[0];
+          const todaysSessions = sessions.filter(session => 
+            session.startTime.startsWith(today)
+          );
+          
+          if (todaysSessions.length > 0) {
+            const latestSession = todaysSessions[todaysSessions.length - 1];
+            setActiveSession({
+              id: latestSession.id,
+              name: latestSession.name
+            });
+          } else {
+            setActiveSession(null);
+          }
+        } catch (error) {
+          console.error('Error fetching active session:', error);
+          setActiveSession(null);
+        }
+      };
+
+      fetchActiveSession();
+    }, [sessionService])
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -64,22 +97,101 @@ export function ExerciseLibraryScreen() {
   const handleGroupPress = (group: ExerciseGroup) => {
     navigation.navigate('ExerciseList', {
       category: group.name,
-      exercises: group.exercises
+      exercises: group.exercises,
+      selectedExercises: Array.from(selectedExercises),
+      onExercisesSelected: (newSelectedExercises: string[]) => {
+        setSelectedExercises(new Set(newSelectedExercises));
+      }
     });
+  };
+
+  const handleBackPress = () => {
+    // Clear selected exercises and navigate back
+    setSelectedExercises(new Set());
+    navigation.navigate('Home');
+  };
+
+  const handleAddToSession = async () => {
+    try {
+      if (selectedExercises.size === 0) return;
+
+      const selectedExercisesList = exercises.filter(exercise => {
+        if (!exercise || !exercise.id) {
+          console.error('Invalid exercise:', exercise);
+          return false;
+        }
+        return selectedExercises.has(exercise.id);
+      });
+
+      if (selectedExercisesList.length === 0) {
+        console.error('No valid exercises selected');
+        return;
+      }
+
+      console.log('Adding exercises to session:', selectedExercisesList);
+      
+      if (activeSession) {
+        // Get the current session to determine the next set number
+        const currentSession = await sessionService.getById(activeSession.id);
+        if (!currentSession) {
+          throw new Error('Active session not found');
+        }
+
+        // Get the highest set number for each exercise
+        const existingSetNumbers = new Map<string, number>();
+        currentSession.exercises.forEach(exercise => {
+          const currentMax = existingSetNumbers.get(exercise.exerciseId) || 0;
+          existingSetNumbers.set(exercise.exerciseId, Math.max(currentMax, exercise.setNumber));
+        });
+
+        // Add new exercises to the existing session
+        await Promise.all(selectedExercisesList.map(async exercise => {
+          const nextSetNumber = (existingSetNumbers.get(exercise.id) || 0) + 1;
+          await sessionService.addExerciseToSession(activeSession.id, {
+            exerciseId: exercise.id,
+            setNumber: nextSetNumber,
+          });
+        }));
+      } else {
+        // Create a new session with the selected exercises
+        await sessionService.create({
+          name: `Workout ${new Date().toLocaleDateString()}`,
+          startTime: new Date().toISOString(),
+        }, selectedExercisesList.map(exercise => ({
+          exerciseId: exercise.id,
+          setNumber: 1,
+        })));
+      }
+
+      // Clear selected exercises and navigate back to home
+      setSelectedExercises(new Set());
+      navigation.navigate('Home');
+    } catch (error) {
+      console.error('Failed to handle exercises:', error);
+    }
   };
 
   const renderExerciseGroups = () => (
     <FlatList
       data={getExercisesByGroup()}
       keyExtractor={(item) => item.name}
-      renderItem={({ item }) => (
-        <ExerciseTypeCard
-          title={item.name}
-          exerciseCount={item.exercises.length}
-          onPress={() => handleGroupPress(item)}
-        />
-      )}
-      contentContainerStyle={styles.listContent}
+      renderItem={({ item }) => {
+        // Calculate how many exercises are selected in this group
+        const selectedInGroup = item.exercises.filter(ex => selectedExercises.has(ex.id)).length;
+        
+        return (
+          <ExerciseTypeCard
+            title={item.name}
+            exerciseCount={item.exercises.length}
+            selectedCount={selectedInGroup}
+            onPress={() => handleGroupPress(item)}
+          />
+        );
+      }}
+      contentContainerStyle={[
+        styles.listContent,
+        selectedExercises.size > 0 && styles.listContentWithButton
+      ]}
       ListEmptyComponent={
         <Text style={styles.placeholderText}>No exercise groups found</Text>
       }
@@ -94,21 +206,23 @@ export function ExerciseLibraryScreen() {
     />
   );
 
+  const renderRoutineGroups = () => (
+    <FlatList
+      data={routines}
+      keyExtractor={(item) => item.id}
+      renderItem={renderRoutineCard}
+      ListEmptyComponent={
+        <Text style={styles.placeholderText}>No routines found</Text>
+      }
+      contentContainerStyle={styles.listContent}
+    />
+  );
+
   const renderTabContent = () => {
     if (activeTab === 'exercises') {
       return renderExerciseGroups();
     } else {
-      return (
-        <FlatList
-          data={routines}
-          keyExtractor={(item) => item.id}
-          renderItem={renderRoutineCard}
-          ListEmptyComponent={
-            <Text style={styles.placeholderText}>No routines found</Text>
-          }
-          contentContainerStyle={styles.listContent}
-        />
-      );
+      return renderRoutineGroups();
     }
   };
 
@@ -117,9 +231,9 @@ export function ExerciseLibraryScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <BackButton />
+        <BackButton onPress={handleBackPress} />
       </View>
       <View style={styles.searchContainer}>
         <TextInput 
@@ -161,6 +275,23 @@ export function ExerciseLibraryScreen() {
       <View style={styles.content}>
         {renderTabContent()}
       </View>
+      {selectedExercises.size > 0 && (
+        <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={handleAddToSession}
+          >
+            <View style={styles.addButtonContent}>
+              <Text style={styles.addButtonText}>
+                {activeSession 
+                  ? `Add to workout (${selectedExercises.size})`
+                  : `Start workout (${selectedExercises.size})`
+                }
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
     </SafeAreaView>
   );
 }
@@ -218,10 +349,46 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
+  listContentWithButton: {
+    paddingBottom: 100, // Extra padding for the button
+  },
   placeholderText: {
     textAlign: 'center',
     marginTop: 20,
     color: '#9CA3AF',
     fontSize: 16,
+  },
+  bottomContainer: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    backgroundColor: 'transparent',
+  },
+  addButton: {
+    backgroundColor: '#101112e5',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+    opacity: 0.9,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  addButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

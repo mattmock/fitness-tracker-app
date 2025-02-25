@@ -8,6 +8,8 @@ export type RootStackParamList = {
   ExerciseList: {
     category: string;
     exercises: Exercise[];
+    selectedExercises: string[];
+    onExercisesSelected: (selectedExercises: string[]) => void;
   };
   // Add other screens here
 }; 

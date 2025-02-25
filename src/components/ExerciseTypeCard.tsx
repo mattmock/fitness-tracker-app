@@ -5,22 +5,31 @@ import { Ionicons } from '@expo/vector-icons';
 interface ExerciseTypeCardProps {
   title: string;
   exerciseCount: number;
+  selectedCount?: number;
   onPress: () => void;
 }
 
-export function ExerciseTypeCard({ title, exerciseCount, onPress }: ExerciseTypeCardProps) {
+export function ExerciseTypeCard({ title, exerciseCount, selectedCount = 0, onPress }: ExerciseTypeCardProps) {
   return (
     <TouchableOpacity 
       style={styles.card} 
       onPress={onPress}
       activeOpacity={0.7}
+      testID="exercise-type-card"
     >
       <View style={styles.cardContent}>
         <View style={styles.mainContent}>
           <Text style={styles.title}>{title}</Text>
-          <Text style={styles.count}>
-            {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}
-          </Text>
+          <View style={styles.countContainer}>
+            <Text style={styles.count}>
+              {exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}
+            </Text>
+            {selectedCount > 0 && (
+              <Text style={styles.selectedCount}>
+                {selectedCount} selected
+              </Text>
+            )}
+          </View>
         </View>
         <Ionicons name="chevron-forward" size={24} color="#666" />
       </View>
@@ -56,9 +65,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
+  countContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   count: {
     fontSize: 14,
     color: '#666',
+    fontWeight: '500',
+  },
+  selectedCount: {
+    fontSize: 14,
+    color: '#007AFF',
     fontWeight: '500',
   },
 }); 

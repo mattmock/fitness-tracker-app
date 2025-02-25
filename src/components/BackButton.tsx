@@ -1,37 +1,36 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface BackButtonProps {
-  label?: string;
+  onPress?: () => void;
 }
 
-export function BackButton({ label = 'Back' }: BackButtonProps) {
+export function BackButton({ onPress }: BackButtonProps) {
   const navigation = useNavigation();
+
+  const handlePress = () => {
+    if (onPress) {
+      onPress();
+    } else {
+      navigation.goBack();
+    }
+  };
 
   return (
     <TouchableOpacity 
-      style={styles.container} 
-      onPress={() => navigation.goBack()}
+      style={styles.button} 
+      onPress={handlePress}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
-      <Ionicons name="chevron-back" size={24} color="#007AFF" />
-      <Text style={styles.text}>{label}</Text>
+      <Ionicons name="chevron-back" size={28} color="#000" />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
-  text: {
-    color: '#007AFF',
-    fontSize: 17,
-    marginLeft: -4,
+  button: {
+    padding: 8,
   },
 }); 

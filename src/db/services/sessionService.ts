@@ -292,4 +292,16 @@ export class SessionService {
 
     return Array.from(sessionsMap.values());
   }
+
+  async addExerciseToSession(
+    sessionId: string,
+    exercise: Omit<SessionExercise, 'id' | 'sessionId' | 'createdAt'>
+  ): Promise<void> {
+    const createdAt = new Date().toISOString();
+
+    await this.db.execAsync(
+      `INSERT INTO session_exercises (session_id, exercise_id, set_number, reps, weight, duration, notes, created_at)
+       VALUES (${toSqlValue(sessionId)}, ${toSqlValue(exercise.exerciseId)}, ${exercise.setNumber}, ${exercise.reps ?? 'NULL'}, ${exercise.weight ?? 'NULL'}, ${exercise.duration ?? 'NULL'}, ${toSqlValue(exercise.notes)}, ${toSqlValue(createdAt)})`
+    );
+  }
 } 

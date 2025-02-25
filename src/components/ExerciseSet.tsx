@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import SetValueInput from './SetValueInput';
 
 interface ExerciseSetProps {
   index: number;
@@ -60,46 +61,26 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
       ]}>Set {index + 1}</Text>
       <View style={styles.setInputs}>
         {isActive ? (
-          <TouchableOpacity 
-            testID="input-container"
-            style={styles.setValueInput} 
+          <SetValueInput
+            ref={weightInputRef}
+            value={weightInput}
+            onChangeText={handleWeightInputChange}
             onPress={() => weightInputRef.current?.focus()}
-          >
-            <TextInput
-              ref={weightInputRef}
-              style={styles.setButtonText}
-              value={weightInput}
-              onChangeText={handleWeightInputChange}
-              keyboardType="number-pad"
-              maxLength={3}
-              selectTextOnFocus
-              accessibilityRole="spinbutton"
-              accessibilityLabel={`Weight for set ${index + 1}`}
-            />
-          </TouchableOpacity>
+            accessibilityLabel={`Weight for set ${index + 1}`}
+          />
         ) : (
           <View style={styles.completedSetValue}>
             <Text style={styles.setButtonText}>{actualWeight ?? 0}</Text>
           </View>
         )}
         {isActive ? (
-          <TouchableOpacity 
-            testID="input-container"
-            style={styles.setValueInput} 
+          <SetValueInput
+            ref={repsInputRef}
+            value={repsInput}
+            onChangeText={handleRepsInputChange}
             onPress={() => repsInputRef.current?.focus()}
-          >
-            <TextInput
-              ref={repsInputRef}
-              style={styles.setButtonText}
-              value={repsInput}
-              onChangeText={handleRepsInputChange}
-              keyboardType="number-pad"
-              maxLength={3}
-              selectTextOnFocus
-              accessibilityRole="spinbutton"
-              accessibilityLabel={`Reps for set ${index + 1}`}
-            />
-          </TouchableOpacity>
+            accessibilityLabel={`Reps for set ${index + 1}`}
+          />
         ) : (
           <View style={styles.completedSetValue}>
             <Text style={styles.setButtonText}>{actualReps ?? 0}</Text>
@@ -155,15 +136,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  setValueInput: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 8,
-    width: 70,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 41,
   },
   completedSetValue: {
     width: 70,

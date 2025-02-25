@@ -63,7 +63,8 @@ describe('ActiveSession', () => {
           weight: 50,
           sessionId: 'test-session'
         },
-        onExpand: expect.any(Function)
+        onExpand: expect.any(Function),
+        onOpenFullView: expect.any(Function)
       },
       expect.any(Object)
     );

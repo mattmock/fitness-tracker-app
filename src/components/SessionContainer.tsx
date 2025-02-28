@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Image
+} from 'react-native';
 import { Session as ModelSession } from '../db/models';
 import { ActiveSession } from './ActiveSession';
 
@@ -30,14 +36,19 @@ export function SessionContainer({ activeSession, onAddExercise }: SessionContai
   }
 
   return (
-    <ActiveSession 
-      session={activeSession}
-      onAddExercise={onAddExercise}
-    />
+    <View style={styles.container}>
+      <ActiveSession 
+        session={activeSession}
+        onAddExercise={onAddExercise}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   emptySession: {
     flex: 1,
     borderRadius: 12,

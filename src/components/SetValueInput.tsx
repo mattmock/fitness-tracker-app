@@ -30,6 +30,7 @@ const SetValueInput = forwardRef<TextInput, SetValueInputProps>(({
         returnKeyType="done"
         maxLength={3}
         selectTextOnFocus
+        blurOnSubmit={true}
         accessibilityRole="spinbutton"
         {...props}
       />

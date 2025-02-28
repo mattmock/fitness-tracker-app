@@ -1,5 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  Platform
+} from 'react-native';
 import { Session } from '../db/models';
 import { ExerciseSetGroup } from './ExerciseSetGroup';
 
@@ -10,52 +17,55 @@ interface ActiveSessionProps {
 
 export function ActiveSession({ session, onAddExercise }: ActiveSessionProps) {
   return (
-    <View style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+    <ScrollView 
+      style={styles.scrollView}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.sessionHeader}>
+        <Text style={styles.sessionTime}>
+          Started at {new Date(session.startTime).toLocaleTimeString()}
+        </Text>
+      </View>
+      <View style={styles.exerciseList}>
+        {session.sessionExercises.map(exercise => (
+          <ExerciseSetGroup 
+            key={exercise.id}
+            item={{
+              ...exercise,
+              setNumber: exercise.sets
+            }} 
+            onExpand={() => {}}
+            onOpenFullView={() => {}}
+          />
+        ))}
+        {session.sessionExercises.length === 0 && (
+          <Text style={styles.placeholderText}>No exercises added yet</Text>
+        )}
+      </View>
+      <TouchableOpacity 
+        style={styles.addExerciseButton}
+        onPress={onAddExercise}
       >
-        <View style={styles.sessionHeader}>
-          <Text style={styles.sessionTime}>
-            Started at {new Date(session.startTime).toLocaleTimeString()}
-          </Text>
-        </View>
-        <View style={styles.exerciseList}>
-          {session.sessionExercises.map(exercise => (
-            <ExerciseSetGroup 
-              key={exercise.id}
-              item={{
-                ...exercise,
-                setNumber: exercise.sets
-              }} 
-              onExpand={() => {}}
-              onOpenFullView={() => {}}
-            />
-          ))}
-          {session.sessionExercises.length === 0 && (
-            <Text style={styles.placeholderText}>No exercises added yet</Text>
-          )}
-        </View>
-        <TouchableOpacity 
-          style={styles.addExerciseButton}
-          onPress={onAddExercise}
-        >
-          <Text style={styles.addExerciseText}>Add Exercise</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+        <Text style={styles.addExerciseText}>Add Exercise</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
+    flexGrow: 1,
+    paddingBottom: 20,
   },
   sessionHeader: {
     flexDirection: 'row',

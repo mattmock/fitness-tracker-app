@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +12,7 @@ import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet/ind
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@expo/vector-icons';
 import { RecentSessionHistory } from '../components/RecentSessionHistory';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -62,7 +63,7 @@ export function HomeScreen() {
   const [activeSession, setActiveSession] = useState<ModelSession | null>(null);
   const [pastSessions, setPastSessions] = useState<ModelSession[]>([]);
   const { sessionService } = useDatabaseContext();
-
+  
   // Calculate snap points based on session count
   const snapPoints = React.useMemo(() => {
     const points = ['10%', '45%'];
@@ -114,27 +115,43 @@ export function HomeScreen() {
   return (
     <BottomSheetModalProvider>
       <View style={styles.container}>
-        <View style={styles.mainContent}>
-          <SafeAreaView edges={['top']}>
-            <View style={styles.headerContainer}>
-              <View style={styles.headerContent}>
-                <Text style={styles.headerText}>Current Session</Text>
-                <TouchableOpacity 
-                  onPress={() => navigation.navigate('Settings')}
-                  style={styles.settingsButton}
-                >
-                  <Ionicons name="settings-outline" size={24} color="#000" />
-                </TouchableOpacity>
+        {/* Main content with KeyboardAwareScrollView */}
+        <KeyboardAwareScrollView
+          style={styles.keyboardAwareView}
+          contentContainerStyle={styles.scrollContent}
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={20}
+          extraHeight={Platform.OS === 'ios' ? 20 : 0}
+          resetScrollToCoords={{ x: 0, y: 0 }}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={styles.mainContent}>
+              <SafeAreaView edges={['top']}>
+                <View style={styles.headerContainer}>
+                  <View style={styles.headerContent}>
+                    <Text style={styles.headerText}>Current Session</Text>
+                    <TouchableOpacity 
+                      onPress={() => navigation.navigate('Settings')}
+                      style={styles.settingsButton}
+                    >
+                      <Ionicons name="settings-outline" size={24} color="#000" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </SafeAreaView>
+              <View style={styles.sessionContainer}>
+                <SessionContainer 
+                  activeSession={activeSession}
+                  onAddExercise={handleAddExercise}
+                />
               </View>
             </View>
-          </SafeAreaView>
-          <View style={styles.sessionContainer}>
-            <SessionContainer 
-              activeSession={activeSession}
-              onAddExercise={handleAddExercise}
-            />
-          </View>
-        </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAwareScrollView>
+        
+        {/* Bottom sheet outside of KeyboardAwareScrollView */}
         {pastSessions.length > 0 && (
           <PastSessionBottomSheet initialSnapPoints={snapPoints}>
             <RecentSessionHistory sessions={pastSessions.map(transformModelToServiceSession)} />
@@ -149,6 +166,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  keyboardAwareView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   mainContent: {
     flex: 1,

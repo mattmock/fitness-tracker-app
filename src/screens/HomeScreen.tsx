@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -113,22 +113,25 @@ export function HomeScreen() {
   };
 
   return (
-    <BottomSheetModalProvider>
-      <View style={styles.container}>
-        {/* Main content with KeyboardAwareScrollView */}
-        <KeyboardAwareScrollView
-          style={styles.keyboardAwareView}
-          contentContainerStyle={styles.scrollContent}
-          enableOnAndroid={true}
-          enableAutomaticScroll={true}
-          keyboardShouldPersistTaps="handled"
-          extraScrollHeight={20}
-          extraHeight={Platform.OS === 'ios' ? 20 : 0}
-          resetScrollToCoords={{ x: 0, y: 0 }}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={styles.mainContent}>
-              <SafeAreaView edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <BottomSheetModalProvider>
+        <View style={styles.container}>
+          {/* Main content with scrollable header */}
+          <KeyboardAwareScrollView
+            style={styles.keyboardAwareView}
+            contentContainerStyle={styles.scrollContent}
+            enableOnAndroid={true}
+            enableAutomaticScroll={true}
+            keyboardShouldPersistTaps="handled"
+            extraScrollHeight={Platform.OS === 'ios' ? 50 : 30}
+            extraHeight={Platform.OS === 'ios' ? 30 : 20}
+            enableResetScrollToCoords={true}
+            resetScrollToCoords={{ x: 0, y: 0 }}
+            keyboardOpeningTime={0}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={styles.mainContent}>
+                {/* Header (now scrollable with content) */}
                 <View style={styles.headerContainer}>
                   <View style={styles.headerContent}>
                     <Text style={styles.headerText}>Current Session</Text>
@@ -140,29 +143,35 @@ export function HomeScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              </SafeAreaView>
-              <View style={styles.sessionContainer}>
-                <SessionContainer 
-                  activeSession={activeSession}
-                  onAddExercise={handleAddExercise}
-                />
+                
+                {/* Session container */}
+                <View style={styles.sessionContainer}>
+                  <SessionContainer 
+                    activeSession={activeSession}
+                    onAddExercise={handleAddExercise}
+                  />
+                </View>
               </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAwareScrollView>
-        
-        {/* Bottom sheet outside of KeyboardAwareScrollView */}
-        {pastSessions.length > 0 && (
-          <PastSessionBottomSheet initialSnapPoints={snapPoints}>
-            <RecentSessionHistory sessions={pastSessions.map(transformModelToServiceSession)} />
-          </PastSessionBottomSheet>
-        )}
-      </View>
-    </BottomSheetModalProvider>
+            </TouchableWithoutFeedback>
+          </KeyboardAwareScrollView>
+          
+          {/* Bottom sheet */}
+          {pastSessions.length > 0 && (
+            <PastSessionBottomSheet initialSnapPoints={snapPoints}>
+              <RecentSessionHistory sessions={pastSessions.map(transformModelToServiceSession)} />
+            </PastSessionBottomSheet>
+          )}
+        </View>
+      </BottomSheetModalProvider>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -178,19 +187,6 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: '#fff',
-    borderBottomColor: '#f0f0f0',
-    zIndex: 0,
-  },
-  headerText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  sessionContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-    zIndex: 0,
   },
   headerContent: {
     flexDirection: 'row',
@@ -199,7 +195,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  headerText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
   settingsButton: {
     padding: 8,
+  },
+  sessionContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 80, // Padding to ensure content is visible above the bottom sheet
   },
 }); 

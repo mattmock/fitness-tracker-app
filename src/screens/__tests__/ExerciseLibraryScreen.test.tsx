@@ -1,187 +1,234 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { act } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { ExerciseLibraryScreen } from '../ExerciseLibraryScreen';
-import { useDatabaseContext } from '../../db/core/hooks';
+import { DatabaseContext } from '../../db/core/hooks';
+import { useNavigation } from '@react-navigation/native';
 
-// Mock the components
-jest.mock('../../components', () => {
-  const React = require('react');
-  const { View, Text, TouchableOpacity } = require('react-native');
-  
-  return {
-    LoadingSpinner: () => (
-      <View testID="loading-spinner">
-        <Text>Loading...</Text>
-      </View>
-    ),
-    BackButton: ({ onPress }: { onPress?: () => void }) => (
-      <TouchableOpacity testID="header-back-button" onPress={onPress}>
-        <Text>Back</Text>
-      </TouchableOpacity>
-    ),
-    ExerciseTypeCard: ({ title, exerciseCount, onPress }: { title: string; exerciseCount: number; onPress: () => void }) => (
-      <TouchableOpacity testID="exercise-type-card" onPress={onPress}>
-        <Text testID="exercise-type-title">{title}</Text>
-        <Text testID="exercise-type-count">{exerciseCount} exercises</Text>
-      </TouchableOpacity>
-    ),
-  };
-});
-
-// Mock the database context
-jest.mock('../../db/core/hooks', () => ({
-  useDatabaseContext: jest.fn(),
+// Mock the navigation hook
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: jest.fn(),
+  useFocusEffect: jest.fn((callback) => {
+    // Execute the callback immediately
+    callback();
+  }),
 }));
 
-// Mock navigation
-const mockNavigate = jest.fn();
-const mockGoBack = jest.fn();
+// Mock the components
+jest.mock('../../components', () => ({
+  LoadingSpinner: jest.fn(() => null),
+  BackButton: jest.fn(() => null),
+  ExerciseTypeCard: jest.fn(() => null),
+}));
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({
-    goBack: mockGoBack,
-    navigate: mockNavigate,
-  }),
-  useFocusEffect: (callback: () => void) => {
-    callback();
-  },
+// Mock the services
+jest.mock('../../db/services/exerciseService', () => ({
+  ExerciseService: jest.fn().mockImplementation(() => ({
+    getAll: jest.fn(),
+    create: jest.fn(),
+    getById: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    searchByName: jest.fn(),
+    getByCategory: jest.fn(),
+  })),
+}));
+
+jest.mock('../../db/services/routineService', () => ({
+  RoutineService: jest.fn().mockImplementation(() => ({
+    getAll: jest.fn(),
+    create: jest.fn(),
+    getById: jest.fn(),
+    update: jest.fn(),
+    updateExercises: jest.fn(),
+    delete: jest.fn(),
+    searchByName: jest.fn(),
+  })),
+}));
+
+jest.mock('../../db/services/sessionService', () => ({
+  SessionService: jest.fn().mockImplementation(() => ({
+    getAll: jest.fn(),
+    create: jest.fn(),
+    getById: jest.fn(),
+    update: jest.fn(),
+    updateExercise: jest.fn(),
+    delete: jest.fn(),
+    getByDateRange: jest.fn(),
+    addExerciseToSession: jest.fn(),
+  })),
+}));
+
+// Import mocked components and services
+import { LoadingSpinner, BackButton, ExerciseTypeCard } from '../../components';
+import { ExerciseService } from '../../db/services/exerciseService';
+import { RoutineService } from '../../db/services/routineService';
+import { SessionService } from '../../db/services/sessionService';
+
+jest.mock('react-native/Libraries/Interaction/InteractionManager', () => ({
+  runAfterInteractions: jest.fn(callback => callback()),
 }));
 
 describe('ExerciseLibraryScreen', () => {
+  const mockNavigate = jest.fn();
+  const mockGoBack = jest.fn();
   const mockContext = {
-    exerciseService: {
-      getAll: jest.fn(),
-    },
-    routineService: {
-      getAll: jest.fn(),
-    },
-    sessionService: {
-      getAll: jest.fn(),
-      create: jest.fn(),
-      getById: jest.fn(),
-      addExerciseToSession: jest.fn(),
-    },
+    forceReset: jest.fn(),
+    exerciseService: new ExerciseService({} as any),
+    routineService: new RoutineService({} as any),
+    sessionService: new SessionService({} as any),
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useDatabaseContext as jest.Mock).mockReturnValue(mockContext);
-    mockContext.exerciseService.getAll.mockResolvedValue([
-      { id: '1', name: 'Exercise 1', category: 'Strength' },
-      { id: '2', name: 'Exercise 2', category: 'Strength' },
+    jest.useFakeTimers();
+    (useNavigation as jest.Mock).mockReturnValue({
+      navigate: mockNavigate,
+      goBack: mockGoBack,
+    });
+    
+    // Mock return values for service methods
+    (mockContext.exerciseService.getAll as jest.Mock).mockResolvedValue([
+      { id: '1', name: 'Exercise 1', category: 'Category 1' },
+      { id: '2', name: 'Exercise 2', category: 'Category 1' },
     ]);
-    mockContext.routineService.getAll.mockResolvedValue([
+    (mockContext.routineService.getAll as jest.Mock).mockResolvedValue([
       { id: '1', name: 'Routine 1', exerciseIds: ['1', '2'] },
+      { id: '2', name: 'Routine 2', exerciseIds: ['1'] },
     ]);
-    mockContext.sessionService.getAll.mockResolvedValue([]);
+    (mockContext.sessionService.getAll as jest.Mock).mockResolvedValue([]);
+
+    // Mock component implementations
+    (LoadingSpinner as jest.Mock).mockImplementation(() => (
+      <View testID="loading-spinner" />
+    ));
+    (BackButton as jest.Mock).mockImplementation(({ onPress }) => (
+      <TouchableOpacity testID="back-button" onPress={onPress} />
+    ));
+    (ExerciseTypeCard as jest.Mock).mockImplementation(({ title, exerciseCount, onPress }) => (
+      <TouchableOpacity testID="exercise-type-card" onPress={onPress}>
+        <Text testID="exercise-type-title">{title}</Text>
+        <Text testID="exercise-type-count">{exerciseCount} exercises</Text>
+      </TouchableOpacity>
+    ));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   const waitForComponentToLoad = async () => {
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      // Wait for all promises to resolve
+      await Promise.resolve();
     });
   };
 
+  const renderAndWait = async (waitForLoad = true) => {
+    const result = render(
+      <DatabaseContext.Provider value={mockContext}>
+        <ExerciseLibraryScreen />
+      </DatabaseContext.Provider>
+    );
+
+    if (waitForLoad) {
+      await waitForComponentToLoad();
+    }
+
+    return result;
+  };
+
   it('renders loading spinner initially', async () => {
-    const { getByTestId } = render(<ExerciseLibraryScreen />);
+    const { getByTestId } = await renderAndWait(false);
     expect(getByTestId('loading-spinner')).toBeTruthy();
   });
 
   it('displays exercise groups after loading', async () => {
-    const { getByTestId } = render(<ExerciseLibraryScreen />);
-    await waitForComponentToLoad();
-
+    const { getByTestId } = await renderAndWait();
     expect(getByTestId('exercise-type-card')).toBeTruthy();
+    expect(getByTestId('exercise-type-title')).toHaveTextContent('Category 1');
+    expect(getByTestId('exercise-type-count')).toHaveTextContent('2 exercises');
   });
 
   it('navigates back when back button is pressed', async () => {
-    const { getByTestId } = render(<ExerciseLibraryScreen />);
-    await waitForComponentToLoad();
-
+    const { getByTestId } = await renderAndWait();
     await act(async () => {
-      fireEvent.press(getByTestId('header-back-button'));
+      fireEvent.press(getByTestId('back-button'));
     });
-    expect(mockContext.sessionService.getAll).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('Home');
   });
 
   it('handles exercise selection and session creation', async () => {
-    mockContext.sessionService.create.mockResolvedValue({ id: 'session1' });
-    
-    // Set up navigation mock before rendering
-    let onExercisesSelected: (exercises: string[]) => void;
-    mockNavigate.mockImplementation((screen, params) => {
-      if (screen === 'ExerciseList') {
-        onExercisesSelected = params.onExercisesSelected;
-      }
-    });
+    // Mock the navigation hook before rendering
+    const mockNavigate = jest.fn();
+    (useNavigation as jest.Mock).mockReturnValue({ navigate: mockNavigate });
 
-    const { getByTestId } = render(<ExerciseLibraryScreen />);
-    await waitForComponentToLoad();
+    // Mock the session service create method
+    (mockContext.sessionService.create as jest.Mock).mockResolvedValue({ id: 'session1' });
 
-    // Select the exercise group
+    const { getByTestId } = await renderAndWait();
+
+    // Select an exercise group
     await act(async () => {
       fireEvent.press(getByTestId('exercise-type-card'));
     });
-    await waitForComponentToLoad();
 
-    // Simulate exercise selection
+    // Verify navigation to ExerciseList
+    expect(mockNavigate).toHaveBeenCalledWith('ExerciseList', expect.any(Object));
+
+    // Mock the onExercisesSelected callback
+    const onExercisesSelected = mockNavigate.mock.calls[0][1].onExercisesSelected;
     await act(async () => {
-      onExercisesSelected(['1']);
-    });
-    await waitForComponentToLoad();
-
-    // Wait for the add button to appear
-    await waitFor(() => {
-      expect(getByTestId('add-to-session-button')).toBeTruthy();
+      onExercisesSelected(['1']); // Use the ID from our mocked exercises
     });
 
-    // Click the add button
+    // Create session
     await act(async () => {
       fireEvent.press(getByTestId('add-to-session-button'));
     });
-    await waitForComponentToLoad();
 
-    // Verify session was created
     expect(mockContext.sessionService.create).toHaveBeenCalledWith(
-      {
-        name: expect.any(String),
+      expect.objectContaining({
+        name: expect.stringContaining('Workout'),
         startTime: expect.any(String),
-      },
-      [
-        {
+      }),
+      expect.arrayContaining([
+        expect.objectContaining({
           exerciseId: '1',
           setNumber: 1,
-        },
-      ]
+        }),
+      ])
     );
   });
 
   it('handles data fetching errors gracefully', async () => {
-    mockContext.exerciseService.getAll.mockRejectedValue(new Error('Failed to fetch exercises'));
+    (mockContext.exerciseService.getAll as jest.Mock).mockRejectedValue(new Error('Failed to fetch exercises'));
     
-    const { getByText } = render(<ExerciseLibraryScreen />);
-    await waitForComponentToLoad();
-
-    await waitFor(() => {
-      expect(getByText('No exercise groups found')).toBeTruthy();
-    });
+    const { getByText } = await renderAndWait();
+    expect(getByText('No exercise groups found')).toBeTruthy();
   });
 
   it('switches between exercises and routines tabs', async () => {
-    const { getByTestId } = render(<ExerciseLibraryScreen />);
-    await waitForComponentToLoad();
+    const { getByTestId, getAllByTestId } = await renderAndWait();
 
     // Switch to routines tab
     await act(async () => {
       fireEvent.press(getByTestId('routines-tab'));
     });
+
+    // Wait for the component to load
     await waitForComponentToLoad();
 
-    // Verify routines are displayed
-    const routineCard = getByTestId('exercise-type-card');
-    expect(routineCard).toBeTruthy();
-    expect(getByTestId('exercise-type-title')).toHaveTextContent('Routine 1');
-    expect(getByTestId('exercise-type-count')).toHaveTextContent('2 exercises');
+    // Check that we have the correct number of routine cards
+    const cards = getAllByTestId('exercise-type-card');
+    expect(cards.length).toBe(2);
+
+    // Check the first routine card's title
+    const titles = getAllByTestId('exercise-type-title');
+    expect(titles[0]).toHaveTextContent('Routine 1');
+
+    // Check the first routine card's count
+    const counts = getAllByTestId('exercise-type-count');
+    expect(counts[0]).toHaveTextContent('2 exercises');
   });
 }); 

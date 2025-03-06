@@ -58,7 +58,8 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "listUnknownPackages": false
+        "listUnknownPackages": false,
+        "exclude": ["react-native-keyboard-aware-scroll-view"]
       }
     }
   }

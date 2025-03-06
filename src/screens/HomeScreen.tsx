@@ -136,10 +136,11 @@ export function HomeScreen() {
                   <View style={styles.headerContent}>
                     <Text style={styles.headerText}>Current Session</Text>
                     <TouchableOpacity 
-                      onPress={() => navigation.navigate('Settings')}
+                      onPress={handleAddExercise}
                       style={styles.settingsButton}
+                      testID="header-add-button"
                     >
-                      <Ionicons name="settings-outline" size={24} color="#000" />
+                      <Ionicons name="add" size={24} color="#000" />
                     </TouchableOpacity>
                   </View>
                 </View>

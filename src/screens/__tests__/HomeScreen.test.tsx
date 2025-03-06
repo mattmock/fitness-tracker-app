@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor, fireEvent } from '@testing-library/react-native';
 import { HomeScreen } from '../HomeScreen';
 import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../../db/services/sessionService';
 import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../../db/models';
@@ -172,6 +172,20 @@ describe('HomeScreen', () => {
       
       // Call the onAddExercise prop
       sessionContainerProps.onAddExercise();
+
+      expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary');
+    });
+
+    it('navigates to ExerciseLibrary when pressing the add button in header', async () => {
+      const { getByTestId } = render(<HomeScreen />);
+      
+      await waitFor(() => {
+        expect(mockGetAll).toHaveBeenCalled();
+      });
+
+      // Find and press the add button in the header
+      const addButton = getByTestId('header-add-button');
+      fireEvent.press(addButton);
 
       expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary');
     });

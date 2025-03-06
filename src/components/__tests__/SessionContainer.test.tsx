@@ -9,7 +9,7 @@ jest.mock('../ActiveSession', () => ({
 }));
 
 // Mock the image require
-jest.mock('../../../assets/images/empty-current-session-background.jpeg', () => 'mocked-image');
+jest.mock('../../../assets/images/dumbbells1.png', () => 'mocked-image');
 
 describe('SessionContainer', () => {
   const mockOnAddExercise = jest.fn();
@@ -27,11 +27,11 @@ describe('SessionContainer', () => {
     );
 
     // Verify empty state text is shown
-    expect(getByText('Tap Add Exercise to start your workout')).toBeTruthy();
+    expect(getByText('Tap Start Session to add exercises')).toBeTruthy();
 
-    // Test the add exercise button
-    const addButton = getByText('Add Exercise');
-    fireEvent.press(addButton);
+    // Test the start session button
+    const startButton = getByTestId('start-session-button');
+    fireEvent.press(startButton);
     expect(mockOnAddExercise).toHaveBeenCalledTimes(1);
   });
 

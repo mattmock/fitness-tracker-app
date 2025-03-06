@@ -44,12 +44,6 @@ export function ActiveSession({ session, onAddExercise }: ActiveSessionProps) {
           <Text style={styles.placeholderText}>No exercises added yet</Text>
         )}
       </View>
-      <TouchableOpacity 
-        style={styles.addExerciseButton}
-        onPress={onAddExercise}
-      >
-        <Text style={styles.addExerciseText}>Add Exercise</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -86,26 +80,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 20,
-  },
-  addExerciseButton: {
-    backgroundColor: '#101112e5',
-    borderRadius: 10,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 16,
-    opacity: 0.9,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  addExerciseText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 }); 

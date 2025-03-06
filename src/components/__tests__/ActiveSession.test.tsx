@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
 import { ActiveSession } from '../ActiveSession';
 import { ExerciseSetGroup } from '../ExerciseSetGroup';
 
@@ -84,18 +84,5 @@ describe('ActiveSession', () => {
     );
 
     expect(getByText('No exercises added yet')).toBeTruthy();
-  });
-
-  it('calls onAddExercise when add exercise button is pressed', () => {
-    const { getByText } = render(
-      <ActiveSession
-        session={mockSession}
-        onAddExercise={mockOnAddExercise}
-      />
-    );
-
-    const addButton = getByText('Add Exercise');
-    fireEvent.press(addButton);
-    expect(mockOnAddExercise).toHaveBeenCalledTimes(1);
   });
 }); 

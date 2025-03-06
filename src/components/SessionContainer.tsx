@@ -19,17 +19,18 @@ export function SessionContainer({ activeSession, onAddExercise }: SessionContai
     return (
       <View style={styles.emptySession}>
         <Text style={styles.placeholderText}>
-          Tap Add Exercise to start your workout
+          Tap <Text style={{fontWeight: 'bold'}}>Start Session</Text> to add exercises
         </Text>
         <Image 
           source={require('../../assets/images/dumbbells1.png')}
           style={styles.placeholderImage}
         />
         <TouchableOpacity 
-          style={styles.addExerciseButton}
+          style={styles.startSessionButton}
           onPress={onAddExercise}
+          testID="start-session-button"
         >
-          <Text style={styles.addExerciseText}>Add Exercise</Text>
+          <Text style={styles.startSessionText}>Start Session</Text>
         </TouchableOpacity>
       </View>
     );
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     top: '25%',
   },
-  addExerciseButton: {
+  startSessionButton: {
     backgroundColor: '#101112e5',
     borderRadius: 10,
     padding: 16,
@@ -88,7 +89,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  addExerciseText: {
+  startSessionText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

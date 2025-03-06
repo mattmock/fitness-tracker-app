@@ -1,7 +1,13 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import BottomSheet, { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetContext } from './BottomSheetContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../navigation/types';
+
+type BottomSheetNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface PastSessionBottomSheetProps {
   children: React.ReactNode;
@@ -14,6 +20,7 @@ export function PastSessionBottomSheet({
   initialSnapPoints = ['10%', '45%', '85%'],
   initialTitle = 'Past Sessions'
 }: PastSessionBottomSheetProps) {
+  const navigation = useNavigation<BottomSheetNavigationProp>();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [snapPoints, setSnapPoints] = useState<(string | number)[]>(initialSnapPoints);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -56,7 +63,15 @@ export function PastSessionBottomSheet({
         <BottomSheetView style={styles.contentContainer}>
           <View style={styles.header}>
             <View style={styles.titleContainer}>
-              <Text style={styles.title}>{title}</Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.title}>{title}</Text>
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate('Settings')}
+                  style={styles.settingsButton}
+                >
+                  <Ionicons name="settings-outline" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
           {children}
@@ -106,9 +121,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingBottom: 25,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 4,
+  },
+  settingsButton: {
+    padding: 8,
   },
 }); 

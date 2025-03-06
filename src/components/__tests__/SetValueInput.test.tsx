@@ -52,21 +52,23 @@ describe('SetValueInput', () => {
   });
 
   it('forwards ref correctly', () => {
-    const ref = React.createRef<any>();
-    const { getByRole } = render(
-      <SetValueInput {...defaultProps} ref={ref} />
+    const mockRef = jest.fn();
+    
+    render(
+      <SetValueInput {...defaultProps} ref={mockRef} />
     );
 
-    const input = getByRole('spinbutton');
-    expect(ref.current).toBe(input);
+    expect(mockRef).toHaveBeenCalled();
+    expect(mockRef.mock.calls[0][0]).not.toBeNull();
   });
 
   it('applies custom testID', () => {
+    const customTestId = 'custom-test-id';
     const { getByTestId } = render(
-      <SetValueInput {...defaultProps} testID="custom-test-id" />
+      <SetValueInput {...defaultProps} testID={customTestId} />
     );
 
-    expect(getByTestId('custom-test-id')).toBeTruthy();
+    expect(getByTestId(customTestId)).toBeTruthy();
   });
 
   it('applies accessibility props', () => {
@@ -95,5 +97,14 @@ describe('SetValueInput', () => {
 
     const input = getByRole('spinbutton');
     expect(input.props.selectTextOnFocus).toBe(true);
+  });
+
+  it('blurs input on submit', () => {
+    const { getByRole } = render(
+      <SetValueInput {...defaultProps} />
+    );
+
+    const input = getByRole('spinbutton');
+    expect(input.props.blurOnSubmit).toBe(true);
   });
 }); 

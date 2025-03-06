@@ -237,13 +237,18 @@ export function ExerciseLibraryScreen() {
       </View>
       <View style={styles.searchContainer}>
         <TextInput 
+          testID="search-input"
           style={styles.searchInput}
           placeholder="Search"
           placeholderTextColor="#999"
+          onChangeText={(text) => {
+            // TODO: Implement search functionality
+          }}
         />
       </View>
       <View style={styles.tabContainer}>
         <TouchableOpacity 
+          testID="exercises-tab"
           style={[
             styles.tab, 
             activeTab === 'exercises' && styles.activeTab
@@ -258,8 +263,9 @@ export function ExerciseLibraryScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
+          testID="routines-tab"
           style={[
-            styles.tab,
+            styles.tab, 
             activeTab === 'routines' && styles.activeTab
           ]}
           onPress={() => setActiveTab('routines')}
@@ -278,6 +284,7 @@ export function ExerciseLibraryScreen() {
       {selectedExercises.size > 0 && (
         <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
           <TouchableOpacity 
+            testID="add-to-session-button"
             style={styles.addButton}
             onPress={handleAddToSession}
           >

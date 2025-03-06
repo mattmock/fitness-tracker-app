@@ -47,6 +47,7 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
     
     return (
       <TouchableOpacity 
+        testID={`exercise-item-${item.id}`}
         style={[styles.card, isSelected && styles.selectedCard]}
         onPress={() => toggleExerciseSelection(item.id)}
         activeOpacity={0.7}
@@ -79,6 +80,7 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
       </View>
       <Text style={styles.title}>{category}</Text>
       <FlatList
+        testID="exercise-list"
         data={exercises}
         keyExtractor={(item) => item.id}
         renderItem={renderExerciseCard}
@@ -93,6 +95,7 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
       {localSelectedCount > 0 && (
         <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
           <TouchableOpacity 
+            testID="select-exercises-button"
             style={styles.addButton}
             onPress={handleSelectAndGoBack}
           >

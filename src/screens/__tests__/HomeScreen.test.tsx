@@ -1,3 +1,19 @@
+/**
+ * HomeScreen.test.tsx
+ * 
+ * Note: This test file currently has some React act() warnings related to state updates
+ * in the HomeScreen component. These warnings occur because some state updates in the
+ * component are not wrapped in act() calls during testing. While the tests are passing,
+ * these warnings should be addressed in the future for better test reliability.
+ * 
+ * The warnings specifically relate to:
+ * 1. setActiveSession() calls in the useFocusEffect hook
+ * 2. setPastSessions() calls in the useFocusEffect hook
+ * 
+ * Future improvements should include properly wrapping these state updates in act()
+ * or using more robust testing patterns for asynchronous state updates.
+ */
+
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
 import { HomeScreen } from '../HomeScreen';
@@ -6,6 +22,8 @@ import type { Session as ModelSession, SessionExercise as ModelSessionExercise }
 import { transformModelToServiceSession } from '../HomeScreen';
 import { SessionContainer } from '../../components/SessionContainer';
 import { PastSessionBottomSheet } from '../../components/PastSessionBottomSheet';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 // Mock navigation
 const mockNavigate = jest.fn();
@@ -35,6 +53,17 @@ jest.mock('../../components/PastSessionBottomSheet', () => ({
   PastSessionBottomSheet: jest.fn(() => null),
 }));
 
+// Mock SafeAreaView
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: jest.fn(({ children }) => children),
+  useSafeAreaInsets: jest.fn(() => ({ top: 0, right: 0, bottom: 0, left: 0 })),
+}));
+
+// Mock KeyboardAwareScrollView
+jest.mock('react-native-keyboard-aware-scroll-view', () => ({
+  KeyboardAwareScrollView: jest.fn(({ children }) => children),
+}));
+
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -47,6 +76,39 @@ describe('HomeScreen', () => {
       
       await waitFor(() => {
         expect(mockGetAll).toHaveBeenCalled();
+      });
+    });
+
+    it('uses SafeAreaView for layout', async () => {
+      render(<HomeScreen />);
+      
+      await waitFor(() => {
+        expect(SafeAreaView).toHaveBeenCalledWith(
+          expect.objectContaining({
+            style: expect.objectContaining({
+              flex: 1,
+            }),
+            edges: ['top'],
+          }),
+          expect.anything()
+        );
+      });
+    });
+
+    it('configures KeyboardAwareScrollView correctly', async () => {
+      render(<HomeScreen />);
+      
+      await waitFor(() => {
+        expect(KeyboardAwareScrollView).toHaveBeenCalledWith(
+          expect.objectContaining({
+            enableOnAndroid: true,
+            enableAutomaticScroll: true,
+            keyboardShouldPersistTaps: 'handled',
+            enableResetScrollToCoords: true,
+            resetScrollToCoords: { x: 0, y: 0 },
+          }),
+          expect.anything()
+        );
       });
     });
 

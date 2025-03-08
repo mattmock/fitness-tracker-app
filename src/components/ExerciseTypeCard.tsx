@@ -7,15 +7,16 @@ interface ExerciseTypeCardProps {
   exerciseCount: number;
   selectedCount?: number;
   onPress: () => void;
+  testID?: string;
 }
 
-export function ExerciseTypeCard({ title, exerciseCount, selectedCount = 0, onPress }: ExerciseTypeCardProps) {
+export function ExerciseTypeCard({ title, exerciseCount, selectedCount = 0, onPress, testID = "exercise-type-card" }: ExerciseTypeCardProps) {
   return (
     <TouchableOpacity 
       style={styles.card} 
       onPress={onPress}
       activeOpacity={0.7}
-      testID="exercise-type-card"
+      testID={testID}
     >
       <View style={styles.cardContent}>
         <View style={styles.mainContent}>

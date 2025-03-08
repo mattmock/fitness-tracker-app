@@ -4,6 +4,7 @@ import { ExerciseLibraryScreen } from '../screens/ExerciseLibraryScreen';
 import { ExerciseListScreen } from '../screens/ExerciseListScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { PlateCalculatorScreen } from '../screens/PlateCalculatorScreen';
+import { AddExerciseScreen } from '../screens/AddExerciseScreen';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +36,11 @@ export function AppNavigator() {
         name="PlateCalculator"
         component={PlateCalculatorScreen}
         options={{ title: 'Plate Calculator' }}
+      />
+      <Stack.Screen
+        name="AddExercise"
+        component={AddExerciseScreen}
+        options={{ title: 'Add Exercise' }}
       />
     </Stack.Navigator>
   );

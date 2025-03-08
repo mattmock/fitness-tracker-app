@@ -11,5 +11,6 @@ export type RootStackParamList = {
     selectedExercises: string[];
     onExercisesSelected: (selectedExercises: string[]) => void;
   };
+  AddExercise: undefined;
   // Add other screens here
 }; 

@@ -25,6 +25,7 @@ export function ExerciseLibraryScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('exercises');
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const [activeSession, setActiveSession] = useState<{ id: string; name: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const { exerciseService, routineService, sessionService } = useDatabaseContext();
   const navigation = useNavigation<NavigationProp>();
 
@@ -58,24 +59,29 @@ export function ExerciseLibraryScreen() {
     }, [sessionService])
   );
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [exercisesData, routinesData] = await Promise.all([
-          exerciseService.getAll(),
-          routineService.getAll()
-        ]);
-        setExercises(exercisesData);
-        setRoutines(routinesData);
-      } catch (error) {
-        console.error('Failed to fetch data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch exercises and routines when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      const fetchData = async () => {
+        try {
+          setError(null);
+          const [exercisesData, routinesData] = await Promise.all([
+            exerciseService.getAll(),
+            routineService.getAll()
+          ]);
+          setExercises(exercisesData);
+          setRoutines(routinesData);
+        } catch (error) {
+          console.error('Failed to fetch data:', error);
+          setError('Failed to load data. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      };
 
-    fetchData();
-  }, [exerciseService, routineService]);
+      fetchData();
+    }, [exerciseService, routineService])
+  );
 
   const getExercisesByGroup = (): ExerciseGroup[] => {
     const groups = new Map<string, Exercise[]>();
@@ -108,7 +114,11 @@ export function ExerciseLibraryScreen() {
   const handleBackPress = () => {
     // Clear selected exercises and navigate back
     setSelectedExercises(new Set());
-    navigation.navigate('Home');
+    navigation.goBack();
+  };
+
+  const handleAddNewExercise = () => {
+    navigation.navigate('AddExercise');
   };
 
   const handleAddToSession = async () => {
@@ -193,7 +203,11 @@ export function ExerciseLibraryScreen() {
         selectedExercises.size > 0 && styles.listContentWithButton
       ]}
       ListEmptyComponent={
-        <Text style={styles.placeholderText}>No exercise groups found</Text>
+        error ? (
+          <Text style={styles.errorText} testID="error-message">{error}</Text>
+        ) : (
+          <Text style={styles.placeholderText}>No exercise groups found</Text>
+        )
       }
     />
   );
@@ -212,7 +226,11 @@ export function ExerciseLibraryScreen() {
       keyExtractor={(item) => item.id}
       renderItem={renderRoutineCard}
       ListEmptyComponent={
-        <Text style={styles.placeholderText}>No routines found</Text>
+        error ? (
+          <Text style={styles.errorText} testID="error-message">{error}</Text>
+        ) : (
+          <Text style={styles.placeholderText}>No routines found</Text>
+        )
       }
       contentContainerStyle={styles.listContent}
     />
@@ -234,6 +252,13 @@ export function ExerciseLibraryScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <BackButton onPress={handleBackPress} />
+        <TouchableOpacity 
+          style={styles.addExerciseButton}
+          onPress={handleAddNewExercise}
+          testID="add-exercise-button"
+        >
+          <Ionicons name="add" size={24} color="#000" />
+        </TouchableOpacity>
       </View>
       <View style={styles.searchContainer}>
         <TextInput 
@@ -309,6 +334,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 8,
     paddingBottom: 4,
   },
@@ -397,5 +425,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+  },
+  addExerciseButton: {
+    padding: 8,
   },
 }); 

@@ -11,6 +11,7 @@ export type RootStackParamList = {
     category: string;
     exercises: Exercise[];
     selectedExercises: string[];
+    activeSessionExerciseIds?: string[];
     onExercisesSelected: (selectedExercises: string[]) => void;
   };
   AddExercise: undefined;

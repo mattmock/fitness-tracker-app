@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '../components';
@@ -12,11 +12,23 @@ import { useFocusEffect } from '@react-navigation/native';
 type ExerciseListScreenProps = NativeStackScreenProps<RootStackParamList, 'ExerciseList'>;
 
 export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProps) {
-  const { category, exercises, selectedExercises: initialSelectedExercises, onExercisesSelected } = route.params;
+  const { 
+    category, 
+    exercises, 
+    selectedExercises: initialSelectedExercises, 
+    activeSessionExerciseIds = [], // New prop for exercises in active session
+    onExercisesSelected 
+  } = route.params;
   const [selectedExercises, setSelectedExercises] = React.useState<Set<string>>(new Set(initialSelectedExercises));
-  const [localSelectedCount, setLocalSelectedCount] = React.useState(
-    exercises.filter(ex => initialSelectedExercises.includes(ex.id)).length
-  );
+  const [localSelectedCount, setLocalSelectedCount] = React.useState(0);
+  
+  // Calculate the count of selected exercises that are NOT in the active session
+  useEffect(() => {
+    const newCount = Array.from(selectedExercises).filter(id => 
+      !activeSessionExerciseIds.includes(id)
+    ).length;
+    setLocalSelectedCount(newCount);
+  }, [selectedExercises, activeSessionExerciseIds]);
 
   const handleBackPress = () => {
     // Restore original selections when going back
@@ -25,13 +37,16 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
   };
 
   const toggleExerciseSelection = (exerciseId: string) => {
+    // Don't allow deselection of exercises in active session
+    if (activeSessionExerciseIds.includes(exerciseId) && selectedExercises.has(exerciseId)) {
+      return; // Exercise is in active session and already selected, so don't toggle
+    }
+
     const newSelection = new Set(selectedExercises);
     if (newSelection.has(exerciseId)) {
       newSelection.delete(exerciseId);
-      setLocalSelectedCount(prev => prev - 1);
     } else {
       newSelection.add(exerciseId);
-      setLocalSelectedCount(prev => prev + 1);
     }
     setSelectedExercises(newSelection);
     onExercisesSelected(Array.from(newSelection));
@@ -44,23 +59,41 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
 
   const renderExerciseCard = ({ item }: { item: Exercise }) => {
     const isSelected = selectedExercises.has(item.id);
+    const isInActiveSession = activeSessionExerciseIds.includes(item.id);
     
     return (
       <TouchableOpacity 
         testID={`exercise-item-${item.id}`}
-        style={[styles.card, isSelected && styles.selectedCard]}
+        style={[
+          styles.card, 
+          isSelected && styles.selectedCard,
+          isInActiveSession && styles.activeSessionCard
+        ]}
         onPress={() => toggleExerciseSelection(item.id)}
-        activeOpacity={0.7}
+        activeOpacity={isInActiveSession && isSelected ? 1 : 0.7} // Disable press effect for hard-selected items
       >
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.titleContainer}>
-              <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+              <View style={[
+                styles.checkbox, 
+                isSelected && styles.checkboxSelected,
+                isInActiveSession && isSelected && styles.checkboxActiveSession
+              ]}>
                 {isSelected && (
-                  <Ionicons name="checkmark" size={16} color="#007AFF" />
+                  <Ionicons 
+                    name="checkmark" 
+                    size={16} 
+                    color={isInActiveSession ? "#555" : "#007AFF"} 
+                  />
                 )}
               </View>
               <Text style={styles.cardTitle}>{item.name}</Text>
+              {isInActiveSession && isSelected && (
+                <View style={styles.activeSessionBadge}>
+                  <Text style={styles.activeSessionBadgeText}>In Session</Text>
+                </View>
+              )}
             </View>
           </View>
           {item.description && (
@@ -72,6 +105,9 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
       </TouchableOpacity>
     );
   };
+
+  // Only show the Select button if there are new selections (not in active session)
+  const showSelectButton = localSelectedCount > 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -86,13 +122,13 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
         renderItem={renderExerciseCard}
         contentContainerStyle={[
           styles.listContent,
-          localSelectedCount > 0 && styles.listContentWithButton
+          showSelectButton && styles.listContentWithButton
         ]}
         ListEmptyComponent={
           <Text style={styles.placeholderText}>No exercises found</Text>
         }
       />
-      {localSelectedCount > 0 && (
+      {showSelectButton && (
         <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
           <TouchableOpacity 
             testID="select-exercises-button"
@@ -152,6 +188,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f9ff',
     borderColor: '#007AFF',
   },
+  activeSessionCard: {
+    borderColor: '#555',
+  },
   cardContent: {
     padding: 16,
   },
@@ -179,6 +218,10 @@ const styles = StyleSheet.create({
   checkboxSelected: {
     borderColor: '#007AFF',
     backgroundColor: '#fff',
+  },
+  checkboxActiveSession: {
+    borderColor: '#555',
+    backgroundColor: '#e0e0e0',
   },
   cardTitle: {
     fontSize: 18,
@@ -228,5 +271,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  activeSessionBadge: {
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  activeSessionBadgeText: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '500',
   },
 }); 

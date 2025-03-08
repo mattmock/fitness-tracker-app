@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
+import { Session, SessionExercise } from '../db/services/sessionService';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -21,14 +22,17 @@ interface ExerciseGroup {
 }
 
 export function ExerciseLibraryScreen() {
+  const { exerciseService, sessionService, routineService } = useDatabaseContext();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('exercises');
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
   const [activeSession, setActiveSession] = useState<{ id: string; name: string } | null>(null);
+  const [currentSession, setCurrentSession] = useState<Session | null>(null);
+  const [activeSessionExerciseIds, setActiveSessionExerciseIds] = useState<string[]>([]);
+  const [newSelectionsCount, setNewSelectionsCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const { exerciseService, routineService, sessionService } = useDatabaseContext();
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ExerciseLibraryRouteProp>();
 
@@ -41,6 +45,20 @@ export function ExerciseLibraryScreen() {
       setSelectedExercises(prev => new Set([...prev, route.params.newExerciseId as string]));
     }
   }, [route.params?.newExerciseId]);
+
+  // Update the count of new selections (not in active session)
+  useEffect(() => {
+    if (currentSession) {
+      // Calculate how many selected exercises are not already in the session
+      const count = Array.from(selectedExercises).filter(id => 
+        !activeSessionExerciseIds.includes(id)
+      ).length;
+      setNewSelectionsCount(count);
+    } else {
+      // If no active session, all selections are new
+      setNewSelectionsCount(selectedExercises.size);
+    }
+  }, [selectedExercises, activeSessionExerciseIds, currentSession]);
 
   // Fetch active session when screen is focused
   useFocusEffect(
@@ -59,12 +77,28 @@ export function ExerciseLibraryScreen() {
               id: latestSession.id,
               name: latestSession.name
             });
+            
+            // Fetch the full session details including exercises
+            const sessionDetails = await sessionService.getById(latestSession.id);
+            setCurrentSession(sessionDetails);
+            
+            // Extract exercise IDs from the current session
+            if (sessionDetails) {
+              const exerciseIds = sessionDetails.exercises.map(ex => ex.exerciseId);
+              setActiveSessionExerciseIds(exerciseIds);
+            } else {
+              setActiveSessionExerciseIds([]);
+            }
           } else {
             setActiveSession(null);
+            setCurrentSession(null);
+            setActiveSessionExerciseIds([]);
           }
         } catch (error) {
           console.error('Error fetching active session:', error);
           setActiveSession(null);
+          setCurrentSession(null);
+          setActiveSessionExerciseIds([]);
         }
       };
 
@@ -114,10 +148,17 @@ export function ExerciseLibraryScreen() {
   };
 
   const handleGroupPress = (group: ExerciseGroup) => {
+    // Make sure exercises in the active session are pre-selected
+    const combinedSelectedExercises = new Set(selectedExercises);
+    activeSessionExerciseIds.forEach(id => {
+      combinedSelectedExercises.add(id);
+    });
+    
     navigation.navigate('ExerciseList', {
       category: group.name,
       exercises: group.exercises,
-      selectedExercises: Array.from(selectedExercises),
+      selectedExercises: Array.from(combinedSelectedExercises),
+      activeSessionExerciseIds, // Pass the active session exercise IDs
       onExercisesSelected: (newSelectedExercises: string[]) => {
         setSelectedExercises(new Set(newSelectedExercises));
       }
@@ -154,25 +195,34 @@ export function ExerciseLibraryScreen() {
       console.log('Adding exercises to session:', selectedExercisesList);
       
       if (activeSession) {
-        // Get the current session to determine the next set number
+        // Get the current session
         const currentSession = await sessionService.getById(activeSession.id);
         if (!currentSession) {
           throw new Error('Active session not found');
         }
 
-        // Get the highest set number for each exercise
-        const existingSetNumbers = new Map<string, number>();
-        currentSession.exercises.forEach(exercise => {
-          const currentMax = existingSetNumbers.get(exercise.exerciseId) || 0;
-          existingSetNumbers.set(exercise.exerciseId, Math.max(currentMax, exercise.setNumber));
-        });
+        // Check which exercises are already in the session to avoid duplicates
+        const existingExerciseIds = new Set(
+          currentSession.exercises.map(exercise => exercise.exerciseId)
+        );
 
-        // Add new exercises to the existing session
-        await Promise.all(selectedExercisesList.map(async exercise => {
-          const nextSetNumber = (existingSetNumbers.get(exercise.id) || 0) + 1;
+        // Filter out exercises that are already in the session
+        const newExercisesToAdd = selectedExercisesList.filter(
+          exercise => !existingExerciseIds.has(exercise.id)
+        );
+        
+        if (newExercisesToAdd.length === 0) {
+          // Show feedback that no new exercises were added
+          console.log('All selected exercises are already in this session');
+          // TODO: Consider adding a toast or alert here
+          return;
+        }
+
+        // Add only new exercises to the session
+        await Promise.all(newExercisesToAdd.map(async exercise => {
           await sessionService.addExerciseToSession(activeSession.id, {
             exerciseId: exercise.id,
-            setNumber: nextSetNumber,
+            setNumber: 1,
           });
         }));
       } else {
@@ -213,7 +263,7 @@ export function ExerciseLibraryScreen() {
       }}
       contentContainerStyle={[
         styles.listContent,
-        selectedExercises.size > 0 && styles.listContentWithButton
+        showAddButton && styles.listContentWithButton
       ]}
       ListEmptyComponent={
         error ? (
@@ -256,6 +306,9 @@ export function ExerciseLibraryScreen() {
       return renderRoutineGroups();
     }
   };
+
+  // Only show the button if there are new selections to add
+  const showAddButton = newSelectionsCount > 0;
 
   if (loading) {
     return <LoadingSpinner />;
@@ -319,7 +372,7 @@ export function ExerciseLibraryScreen() {
       <View style={styles.content}>
         {renderTabContent()}
       </View>
-      {selectedExercises.size > 0 && (
+      {showAddButton && (
         <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
           <TouchableOpacity 
             testID="add-to-session-button"
@@ -329,8 +382,8 @@ export function ExerciseLibraryScreen() {
             <View style={styles.addButtonContent}>
               <Text style={styles.addButtonText}>
                 {activeSession 
-                  ? `Add to workout (${selectedExercises.size})`
-                  : `Start workout (${selectedExercises.size})`
+                  ? `Add to workout (${newSelectionsCount})`
+                  : `Start workout (${newSelectionsCount})`
                 }
               </Text>
             </View>

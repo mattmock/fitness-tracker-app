@@ -2,7 +2,9 @@ import { Exercise } from '../db/models';
 
 export type RootStackParamList = {
   Home: undefined;
-  ExerciseLibrary: undefined;
+  ExerciseLibrary: {
+    newExerciseId?: string;
+  };
   Settings: undefined;
   PlateCalculator: undefined;
   ExerciseList: {

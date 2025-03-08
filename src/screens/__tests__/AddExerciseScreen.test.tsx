@@ -22,6 +22,7 @@ jest.mock('@expo/vector-icons', () => ({
 describe('AddExerciseScreen', () => {
   const mockNavigation = {
     goBack: jest.fn(),
+    navigate: jest.fn(),
   };
 
   const mockExerciseService = {
@@ -96,7 +97,7 @@ describe('AddExerciseScreen', () => {
     expect(mockExerciseService.create).not.toHaveBeenCalled();
   });
 
-  it('successfully saves a new exercise', async () => {
+  it('successfully saves a new exercise and navigates to ExerciseLibrary with newExerciseId', async () => {
     const { getByPlaceholderText, getByText } = render(<AddExerciseScreen />);
     
     // Fill in the form
@@ -120,8 +121,11 @@ describe('AddExerciseScreen', () => {
       });
     });
     
-    // Verify navigation
-    expect(mockNavigation.goBack).toHaveBeenCalled();
+    // Verify navigation to ExerciseLibrary with newExerciseId
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ExerciseLibrary', {
+      newExerciseId: expect.any(String),
+    });
+    expect(mockNavigation.goBack).not.toHaveBeenCalled();
   });
 
   it('handles database error when saving', async () => {
@@ -142,6 +146,7 @@ describe('AddExerciseScreen', () => {
     });
     
     // Verify that navigation was not called (error case)
+    expect(mockNavigation.navigate).not.toHaveBeenCalled();
     expect(mockNavigation.goBack).not.toHaveBeenCalled();
   });
 }); 

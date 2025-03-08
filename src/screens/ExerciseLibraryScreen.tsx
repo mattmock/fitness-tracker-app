@@ -5,13 +5,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDatabaseContext } from '../db';
 import type { Exercise } from '../db/services/exerciseService';
 import type { Routine } from '../db/services/routineService';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
+import { RouteProp } from '@react-navigation/native';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type ExerciseLibraryRouteProp = RouteProp<RootStackParamList, 'ExerciseLibrary'>;
 
 interface ExerciseGroup {
   name: string;
@@ -28,6 +30,17 @@ export function ExerciseLibraryScreen() {
   const [error, setError] = useState<string | null>(null);
   const { exerciseService, routineService, sessionService } = useDatabaseContext();
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<ExerciseLibraryRouteProp>();
+
+  // Handle new exercise selection when navigating from AddExerciseScreen
+  useEffect(() => {
+    if (route.params?.newExerciseId) {
+      // Switch to exercises tab if not already active
+      setActiveTab('exercises');
+      // Add the new exercise to selected exercises
+      setSelectedExercises(prev => new Set([...prev, route.params.newExerciseId as string]));
+    }
+  }, [route.params?.newExerciseId]);
 
   // Fetch active session when screen is focused
   useFocusEffect(

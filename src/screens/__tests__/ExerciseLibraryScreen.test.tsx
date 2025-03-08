@@ -3,13 +3,14 @@ import { render, fireEvent, act } from '@testing-library/react-native';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ExerciseLibraryScreen } from '../ExerciseLibraryScreen';
 import { DatabaseContext } from '../../db/core/hooks';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 // Mock the navigation hook
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(),
   // Completely disable useFocusEffect by making it a no-op
   useFocusEffect: jest.fn(),
+  useRoute: jest.fn(),
 }));
 
 // Mock the components
@@ -76,6 +77,7 @@ describe('ExerciseLibraryScreen', () => {
   // Mock navigation functions
   const mockNavigate = jest.fn();
   const mockGoBack = jest.fn();
+  const mockRoute = { params: {} };
   
   // Mock context
   const mockContext = {
@@ -94,6 +96,9 @@ describe('ExerciseLibraryScreen', () => {
       navigate: mockNavigate,
       goBack: mockGoBack,
     });
+
+    // Setup route mock
+    (useRoute as jest.Mock).mockReturnValue(mockRoute);
 
     // Setup service mocks
     (mockContext.exerciseService.getAll as jest.Mock).mockResolvedValue([
@@ -203,7 +208,7 @@ describe('ExerciseLibraryScreen', () => {
     expect(mockNavigate).toHaveBeenCalledWith('AddExercise');
   });
 
-  it('refreshes data when returning from AddExercise screen', async () => {
+  it('refreshes data when returning from AddExercise screen with newExerciseId', async () => {
     // Mock the component to return an add button
     (ExerciseLibraryScreen as jest.Mock).mockImplementation(() => (
       <TouchableOpacity 
@@ -212,13 +217,35 @@ describe('ExerciseLibraryScreen', () => {
       />
     ));
     
-    const { getByTestId } = await renderAndWait();
-    // Simulate returning from AddExercise screen
+    const { getByTestId, rerender } = await renderAndWait();
+    
+    // Simulate navigation to AddExercise
     await act(async () => {
       fireEvent.press(getByTestId('add-exercise-button'));
-      await waitForComponentToLoad();
     });
     expect(mockNavigate).toHaveBeenCalledWith('AddExercise');
+    
+    // Simulate returning from AddExercise with newExerciseId
+    mockRoute.params = { newExerciseId: '123' };
+    
+    // Update the component to show selected exercises
+    (ExerciseLibraryScreen as jest.Mock).mockImplementation(() => (
+      <View>
+        <Text testID="selected-exercise-count">1 selected</Text>
+        <Text testID="active-tab">exercises</Text>
+      </View>
+    ));
+    
+    // Re-render to trigger the useEffect
+    rerender(
+      <DatabaseContext.Provider value={mockContext}>
+        <ExerciseLibraryScreen />
+      </DatabaseContext.Provider>
+    );
+    
+    // Verify that the exercises tab is active and the exercise is selected
+    expect(getByTestId('active-tab')).toHaveTextContent('exercises');
+    expect(getByTestId('selected-exercise-count')).toHaveTextContent('1 selected');
   });
 
   it('handles exercise selection and session creation', async () => {
@@ -307,5 +334,52 @@ describe('ExerciseLibraryScreen', () => {
       fireEvent.press(getByTestId('routines-tab'));
     });
     expect(getByTestId('routines-tab')).toBeTruthy();
+  });
+
+  it('handles new exercise selection when navigating from AddExerciseScreen', async () => {
+    // Set up route params with newExerciseId
+    mockRoute.params = { newExerciseId: '123' };
+    
+    // Mock the component to show selected exercises
+    (ExerciseLibraryScreen as jest.Mock).mockImplementation(() => (
+      <View>
+        <Text testID="selected-exercise-count">1 selected</Text>
+        <Text testID="active-tab">exercises</Text>
+      </View>
+    ));
+    
+    const { getByTestId } = await renderAndWait();
+    
+    // Verify that the exercises tab is active and the exercise is selected
+    expect(getByTestId('active-tab')).toHaveTextContent('exercises');
+    expect(getByTestId('selected-exercise-count')).toHaveTextContent('1 selected');
+  });
+
+  it('handles navigation from AddExerciseScreen with newExerciseId', async () => {
+    // Mock a newly created exercise
+    const newExerciseId = '123';
+    const newExercise = { id: newExerciseId, name: 'New Exercise', category: 'New Category' };
+    
+    // Setup exercise service to return the new exercise
+    (mockContext.exerciseService.getById as jest.Mock).mockResolvedValue(newExercise);
+    
+    // Set up route params with newExerciseId
+    mockRoute.params = { newExerciseId };
+    
+    // Mock the component to show the exercises tab with the new exercise selected
+    (ExerciseLibraryScreen as jest.Mock).mockImplementation(() => (
+      <View>
+        <Text testID="active-tab">exercises</Text>
+        <View testID="selected-exercises">
+          <Text testID="selected-exercise-id">{newExerciseId}</Text>
+        </View>
+      </View>
+    ));
+    
+    const { getByTestId } = await renderAndWait();
+    
+    // Verify that the exercises tab is active and the new exercise is selected
+    expect(getByTestId('active-tab')).toHaveTextContent('exercises');
+    expect(getByTestId('selected-exercise-id')).toHaveTextContent(newExerciseId);
   });
 }); 

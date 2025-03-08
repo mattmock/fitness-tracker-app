@@ -30,14 +30,15 @@ export function AddExerciseScreen() {
         return;
       }
 
+      const newExerciseId = Date.now().toString();
       await exerciseService.create({
-        id: Date.now().toString(),
+        id: newExerciseId,
         name: name.trim(),
         category: category || undefined,
         description: description.trim() || undefined,
       });
 
-      navigation.goBack();
+      navigation.navigate('ExerciseLibrary', { newExerciseId });
     } catch (error) {
       console.error('Failed to create exercise:', error);
       // TODO: Show error message

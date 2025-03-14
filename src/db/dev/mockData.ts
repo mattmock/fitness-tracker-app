@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { Exercise, Routine, Session, SessionExercise } from '../services';
+import type { Exercise, Routine, Session, SessionExercise } from '../models';
 import { ConfigService } from '../../config/ConfigService';
 
 // Exercise categories
@@ -60,28 +60,28 @@ export class MockDataGenerator {
     return {
       exerciseId,
       setNumber: faker.number.int({ min: 1, max: 5 }),
-      reps: faker.number.int({ min: 8, max: 15 }),
-      weight: faker.number.float({ min: 5, max: 100, fractionDigits: 1 }),
-      notes: faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.3 })
+      reps: faker.number.int({ min: 5, max: 20 }),
+      weight: faker.number.int({ min: 5, max: 100 }),
+      duration: faker.datatype.boolean() ? faker.number.int({ min: 30, max: 120 }) : undefined,
+      notes: faker.datatype.boolean() ? faker.lorem.sentence() : undefined
     };
   }
 
-  static generateSession(exerciseIds: string[]): Omit<Session, 'id' | 'createdAt' | 'exercises'> & { exercises: Array<Omit<SessionExercise, 'id' | 'sessionId' | 'createdAt'>> } {
-    const selectedExerciseIds = faker.helpers.arrayElements(exerciseIds, { min: 2, max: 4 });
-    const startTime = faker.date.recent({ days: 30 }).toISOString();
+  static generateSession(exerciseIds: string[]): Omit<Session, 'id' | 'createdAt' | 'sessionExercises'> & { sessionExercises: Array<Omit<SessionExercise, 'id' | 'sessionId' | 'createdAt'>> } {
+    const sessionNames = ['Morning Workout', 'Evening Session', 'Quick Workout', 'Strength Training', 'Recovery Session'];
+    const startTime = faker.date.recent({ days: 14 }).toISOString();
+    
+    // Generate 1-5 random exercises for this session
+    const sessionExerciseCount = faker.number.int({ min: 1, max: 5 });
+    const selectedExerciseIds = faker.helpers.arrayElements(exerciseIds, sessionExerciseCount);
+    const sessionExercises = selectedExerciseIds.map(id => this.generateSessionExercise(id));
     
     return {
-      name: faker.helpers.arrayElement([
-        'Morning Workout',
-        'Evening Session',
-        'Quick Workout',
-        'Strength Training',
-        'Recovery Session'
-      ]),
-      notes: faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.3 }),
+      name: faker.helpers.arrayElement(sessionNames),
+      notes: faker.datatype.boolean() ? faker.lorem.sentence() : undefined,
       startTime,
-      endTime: faker.helpers.maybe(() => faker.date.soon({ days: 1, refDate: startTime }).toISOString(), { probability: 0.8 }),
-      exercises: selectedExerciseIds.map(id => this.generateSessionExercise(id))
+      endTime: faker.datatype.boolean() ? new Date(new Date(startTime).getTime() + 60 * 60 * 1000).toISOString() : undefined,
+      sessionExercises
     };
   }
 
@@ -91,32 +91,51 @@ export class MockDataGenerator {
       throw new Error('Mock data generation is disabled. Enable it in ConfigService first.');
     }
 
-    const exerciseCount = count.exercises ?? 10;
+    const exerciseCount = count.exercises ?? 20;
     const routineCount = count.routines ?? 5;
-    const sessionCount = count.sessions ?? 20;
-
+    const sessionCount = count.sessions ?? 10;
+    
     // Generate exercises
-    const exercises = Array.from(
-      { length: exerciseCount },
-      () => this.generateExercise()
-    );
-
-    // Generate routines using exercise IDs
-    const routines = Array.from(
-      { length: routineCount },
-      () => this.generateRoutine(exercises.map(e => e.id))
-    );
-
-    // Generate sessions using exercise IDs
-    const sessions = Array.from(
-      { length: sessionCount },
-      () => this.generateSession(exercises.map(e => e.id))
-    );
-
-    return {
-      exercises,
-      routines,
-      sessions
-    };
+    const exercises: Exercise[] = [];
+    for (let i = 0; i < exerciseCount; i++) {
+      const exercise = {
+        ...this.generateExercise(),
+        id: `ex-${i + 1}`,
+        createdAt: new Date().toISOString()
+      };
+      exercises.push(exercise);
+    }
+    
+    // Generate routines
+    const routines: Routine[] = [];
+    const exerciseIds = exercises.map(e => e.id);
+    for (let i = 0; i < routineCount; i++) {
+      const routine = {
+        ...this.generateRoutine(exerciseIds),
+        id: `routine-${i + 1}`,
+        createdAt: new Date().toISOString()
+      };
+      routines.push(routine);
+    }
+    
+    // Generate sessions
+    const sessions: Session[] = [];
+    for (let i = 0; i < sessionCount; i++) {
+      const sessionData = this.generateSession(exerciseIds);
+      const session: Session = {
+        id: `session-${i + 1}`,
+        ...sessionData,
+        sessionExercises: sessionData.sessionExercises.map((exercise, j) => ({
+          ...exercise,
+          id: `session-${i + 1}-exercise-${j + 1}`,
+          sessionId: `session-${i + 1}`,
+          createdAt: new Date().toISOString()
+        })),
+        createdAt: new Date().toISOString()
+      };
+      sessions.push(session);
+    }
+    
+    return { exercises, routines, sessions };
   }
 } 

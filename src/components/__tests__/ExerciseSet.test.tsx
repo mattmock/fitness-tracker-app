@@ -19,6 +19,15 @@ describe('ExerciseSet', () => {
     actualWeight: 0,
   };
 
+  const durationProps = {
+    index: 0,
+    reps: 0,
+    weight: 0,
+    duration: 60,
+    onCheckPress: jest.fn(),
+    isActive: false,
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -42,6 +51,19 @@ describe('ExerciseSet', () => {
     expect(getByText('Set 1')).toBeTruthy();
     expect(getByText('90')).toBeTruthy();
     expect(getByText('8')).toBeTruthy();
+  });
+
+  it('renders correctly for a duration-based exercise', () => {
+    const { getByText, queryAllByRole } = render(
+      <ExerciseSet {...durationProps} />
+    );
+
+    expect(getByText('Set 1')).toBeTruthy();
+    expect(getByText('60s')).toBeTruthy();
+    
+    // Should not have inputs for weight and reps
+    const textInputs = queryAllByRole('spinbutton');
+    expect(textInputs).toHaveLength(0);
   });
 
   it('handles weight input changes', () => {
@@ -72,6 +94,16 @@ describe('ExerciseSet', () => {
     const onCheckPress = jest.fn();
     const { getByTestId } = render(
       <ExerciseSet {...defaultProps} isActive={true} onCheckPress={onCheckPress} />
+    );
+
+    fireEvent.press(getByTestId('check-button'));
+    expect(onCheckPress).toHaveBeenCalled();
+  });
+
+  it('handles check press for duration-based exercises', () => {
+    const onCheckPress = jest.fn();
+    const { getByTestId } = render(
+      <ExerciseSet {...durationProps} isActive={true} onCheckPress={onCheckPress} />
     );
 
     fireEvent.press(getByTestId('check-button'));

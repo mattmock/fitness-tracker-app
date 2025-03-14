@@ -1,67 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+// React and React Native
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Platform, 
+  TouchableWithoutFeedback, 
+  Keyboard 
+} from 'react-native';
+
+// Navigation
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { RootStackParamList } from '../navigation/types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types';
+
+// Third-party libraries
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useDatabaseContext } from '../db';
-import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../db/services/sessionService';
-import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../db/models';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { Ionicons } from '@expo/vector-icons';
+
+// Local components
 import { SessionContainer } from '../components/SessionContainer';
 import { PastSessionBottomSheet } from '../components/PastSessionBottomSheet/index';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { Ionicons } from '@expo/vector-icons';
 import { RecentSessionHistory } from '../components/RecentSessionHistory';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+
+// Hooks and types
+import { useDatabaseContext } from '../db';
+import type { Session } from '../db/models';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
-// Transform service exercise to model exercise
-function transformExercise(exercise: ServiceSessionExercise): ModelSessionExercise {
-  return {
-    ...exercise,
-    sets: exercise.setNumber, // Use setNumber as sets
-    reps: exercise.reps || 0, // Default to 0 if not set
-    completed: true, // Assume completed since these are past exercises
-    updatedAt: exercise.createdAt
-  };
-}
-
-// Transform service session to model session
-function transformSession(session: ServiceSession): ModelSession {
-  return {
-    ...session,
-    sessionExercises: session.exercises.map(transformExercise),
-    updatedAt: session.createdAt
-  };
-}
-
-export function transformModelToServiceSession(session: ModelSession): ServiceSession {
-  return {
-    id: session.id,
-    routineId: session.routineId,
-    name: 'Workout Session',
-    startTime: session.startTime,
-    endTime: session.endTime,
-    createdAt: session.createdAt,
-    exercises: session.sessionExercises.map(ex => ({
-      id: ex.id,
-      sessionId: ex.sessionId,
-      exerciseId: ex.exerciseId,
-      setNumber: ex.sets,
-      reps: ex.reps,
-      weight: ex.weight,
-      duration: undefined,
-      notes: ex.notes,
-      createdAt: ex.createdAt
-    }))
-  };
-}
-
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  const [activeSession, setActiveSession] = useState<ModelSession | null>(null);
-  const [pastSessions, setPastSessions] = useState<ModelSession[]>([]);
+  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const { sessionService } = useDatabaseContext();
   
   // Calculate snap points based on session count
@@ -93,12 +67,12 @@ export function HomeScreen() {
           console.log('Past sessions:', pastSessions.length);
 
           if (todaysSessions.length > 0) {
-            setActiveSession(transformSession(todaysSessions[todaysSessions.length - 1]));
+            setActiveSession(todaysSessions[todaysSessions.length - 1]);
           } else {
             setActiveSession(null);
           }
 
-          setPastSessions(pastSessions.map(transformSession));
+          setPastSessions(pastSessions);
         } catch (error) {
           console.error('Error fetching sessions:', error);
         }
@@ -109,7 +83,7 @@ export function HomeScreen() {
   );
 
   const handleAddExercise = () => {
-    navigation.navigate('ExerciseLibrary');
+    navigation.navigate('ExerciseLibrary', { newExerciseId: undefined });
   };
 
   return (
@@ -159,7 +133,7 @@ export function HomeScreen() {
           {/* Bottom sheet */}
           {pastSessions.length > 0 && (
             <PastSessionBottomSheet initialSnapPoints={snapPoints}>
-              <RecentSessionHistory sessions={pastSessions.map(transformModelToServiceSession)} />
+              <RecentSessionHistory sessions={pastSessions} />
             </PastSessionBottomSheet>
           )}
         </View>

@@ -22,7 +22,34 @@ describe('ExerciseSetGroup', () => {
       setNumber: 3,
       reps: 10,
       weight: 100,
-      completed: false,
+      createdAt: new Date().toISOString(),
+    },
+    onExpand: jest.fn(),
+    onOpenFullView: jest.fn(),
+  };
+
+  const durationExerciseProps = {
+    item: {
+      id: '2',
+      sessionId: 'session1',
+      exerciseId: '2',
+      setNumber: 1,
+      duration: 60,
+      createdAt: new Date().toISOString(),
+    },
+    onExpand: jest.fn(),
+    onOpenFullView: jest.fn(),
+  };
+
+  const hybridExerciseProps = {
+    item: {
+      id: '3',
+      sessionId: 'session1',
+      exerciseId: '3',
+      setNumber: 2,
+      reps: 10,
+      weight: 50,
+      duration: 45,
       createdAt: new Date().toISOString(),
     },
     onExpand: jest.fn(),
@@ -188,5 +215,37 @@ describe('ExerciseSetGroup', () => {
     fireEvent.press(getByText('Full View →'));
     expect(defaultProps.onOpenFullView).toHaveBeenCalledTimes(1);
     expect(defaultProps.onOpenFullView).toHaveBeenCalledWith(defaultProps.item.id);
+  });
+
+  it('displays duration for duration-based exercises', async () => {
+    const { getByText } = render(
+      <ExerciseSetGroup {...durationExerciseProps} />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getByText('60s')).toBeTruthy();
+  });
+
+  it('handles exercises with both duration and weight/reps', async () => {
+    const { getByText, getByTestId } = render(
+      <ExerciseSetGroup {...hybridExerciseProps} />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Should display duration in the header
+    expect(getByText('45s')).toBeTruthy();
+
+    // Expand to see sets
+    fireEvent.press(getByTestId('exercise-header'));
+
+    // Should still show weight and reps fields
+    expect(getByText('Weight')).toBeTruthy();
+    expect(getByText('Reps')).toBeTruthy();
   });
 }); 

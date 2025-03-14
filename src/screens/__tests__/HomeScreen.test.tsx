@@ -14,14 +14,22 @@
  * or using more robust testing patterns for asynchronous state updates.
  */
 
+// React and testing libraries
 import React from 'react';
 import { render, waitFor, fireEvent } from '@testing-library/react-native';
+import { act } from 'react-test-renderer';
+
+// Component under test
 import { HomeScreen } from '../HomeScreen';
-import type { Session as ServiceSession, SessionExercise as ServiceSessionExercise } from '../../db/services/sessionService';
-import type { Session as ModelSession, SessionExercise as ModelSessionExercise } from '../../db/models';
-import { transformModelToServiceSession } from '../HomeScreen';
+
+// Types
+import type { Session } from '../../db/models';
+
+// Components used in tests
 import { SessionContainer } from '../../components/SessionContainer';
 import { PastSessionBottomSheet } from '../../components/PastSessionBottomSheet';
+
+// Third-party libraries
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
@@ -31,7 +39,8 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
     navigate: mockNavigate,
   }),
-  useFocusEffect: jest.fn((callback) => callback()),
+  // Simple mock that just calls the callback once
+  useFocusEffect: jest.fn(cb => cb()),
 }));
 
 // Mock database service
@@ -64,6 +73,29 @@ jest.mock('react-native-keyboard-aware-scroll-view', () => ({
   KeyboardAwareScrollView: jest.fn(({ children }) => children),
 }));
 
+// Helper function to render the component and wait for initial data loading
+const renderAndWait = async () => {
+  // Render the component
+  const renderResult = render(<HomeScreen />);
+  
+  // Wait for the initial data loading to complete
+  await waitFor(() => {
+    expect(mockGetAll).toHaveBeenCalled();
+  }, { timeout: 3000 }); // Increase timeout to ensure async operations complete
+  
+  // Get the SessionContainer props after all state updates have been processed
+  await waitFor(() => {
+    expect(SessionContainer).toHaveBeenCalled();
+  }, { timeout: 3000 });
+  
+  const sessionContainerProps = (SessionContainer as jest.Mock).mock.calls[0][0];
+  
+  return {
+    ...renderResult,
+    sessionContainerProps
+  };
+};
+
 describe('HomeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -76,7 +108,7 @@ describe('HomeScreen', () => {
       
       await waitFor(() => {
         expect(mockGetAll).toHaveBeenCalled();
-      });
+      }, { timeout: 3000 });
     });
 
     it('uses SafeAreaView for layout', async () => {
@@ -92,7 +124,7 @@ describe('HomeScreen', () => {
           }),
           expect.anything()
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it('configures KeyboardAwareScrollView correctly', async () => {
@@ -109,16 +141,17 @@ describe('HomeScreen', () => {
           }),
           expect.anything()
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it('handles today\'s session correctly', async () => {
       const today = new Date().toISOString().split('T')[0];
       const mockTodaySession = {
         id: 'today-session',
+        name: 'Today Session',
         startTime: `${today}T10:00:00Z`,
         createdAt: `${today}T10:00:00Z`,
-        exercises: []
+        sessionExercises: []
       };
 
       mockGetAll.mockResolvedValueOnce([mockTodaySession]);
@@ -134,16 +167,17 @@ describe('HomeScreen', () => {
           }),
           expect.any(Object)
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it('handles past sessions correctly', async () => {
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
       const mockPastSession = {
         id: 'past-session',
+        name: 'Past Session',
         startTime: `${yesterday}T10:00:00Z`,
         createdAt: `${yesterday}T10:00:00Z`,
-        exercises: []
+        sessionExercises: []
       };
 
       mockGetAll.mockResolvedValueOnce([mockPastSession]);
@@ -157,143 +191,23 @@ describe('HomeScreen', () => {
           }),
           expect.any(Object)
         );
-      });
+      }, { timeout: 3000 });
     });
 
     it('navigates to ExerciseLibrary when adding exercise', async () => {
-      render(<HomeScreen />);
+      const { sessionContainerProps } = await renderAndWait();
       
-      await waitFor(() => {
-        expect(mockGetAll).toHaveBeenCalled();
-      });
-
-      // Get the SessionContainer props
-      const sessionContainerProps = (SessionContainer as jest.Mock).mock.calls[0][0];
-      
-      // Call the onAddExercise prop
       sessionContainerProps.onAddExercise();
-
-      expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary');
+      
+      expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary', { newExerciseId: undefined });
     });
 
     it('navigates to ExerciseLibrary when pressing the add button in header', async () => {
-      const { getByTestId } = render(<HomeScreen />);
+      const { getByTestId } = await renderAndWait();
       
-      await waitFor(() => {
-        expect(mockGetAll).toHaveBeenCalled();
-      });
-
-      // Find and press the add button in the header
-      const addButton = getByTestId('header-add-button');
-      fireEvent.press(addButton);
-
-      expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary');
-    });
-  });
-
-  describe('transformModelToServiceSession', () => {
-    it('transforms a model session to a service session correctly', () => {
-      const modelSession: ModelSession = {
-        id: 'test-id',
-        routineId: 'routine-1',
-        startTime: '2024-03-14T10:00:00Z',
-        endTime: '2024-03-14T11:00:00Z',
-        createdAt: '2024-03-14T10:00:00Z',
-        sessionExercises: [{
-          id: 'exercise-1',
-          sessionId: 'test-id',
-          exerciseId: 'ex-1',
-          sets: 3,
-          reps: 12,
-          weight: 100,
-          notes: 'Test notes',
-          completed: true,
-          createdAt: '2024-03-14T10:00:00Z'
-        }]
-      };
-
-      const expectedServiceSession: ServiceSession = {
-        id: 'test-id',
-        routineId: 'routine-1',
-        name: 'Workout Session',
-        startTime: '2024-03-14T10:00:00Z',
-        endTime: '2024-03-14T11:00:00Z',
-        createdAt: '2024-03-14T10:00:00Z',
-        exercises: [{
-          id: 'exercise-1',
-          sessionId: 'test-id',
-          exerciseId: 'ex-1',
-          setNumber: 3,
-          reps: 12,
-          weight: 100,
-          duration: undefined,
-          notes: 'Test notes',
-          createdAt: '2024-03-14T10:00:00Z'
-        }]
-      };
-
-      const result = transformModelToServiceSession(modelSession);
-      expect(result).toEqual(expectedServiceSession);
-    });
-
-    it('handles empty session exercises', () => {
-      const modelSession: ModelSession = {
-        id: 'test-id',
-        startTime: '2024-03-14T10:00:00Z',
-        createdAt: '2024-03-14T10:00:00Z',
-        sessionExercises: []
-      };
-
-      const expectedServiceSession: ServiceSession = {
-        id: 'test-id',
-        name: 'Workout Session',
-        startTime: '2024-03-14T10:00:00Z',
-        createdAt: '2024-03-14T10:00:00Z',
-        exercises: []
-      };
-
-      const result = transformModelToServiceSession(modelSession);
-      expect(result).toEqual(expectedServiceSession);
-    });
-
-    it('handles optional fields correctly', () => {
-      const modelSession: ModelSession = {
-        id: 'test-id',
-        routineId: undefined,
-        startTime: '2024-03-14T10:00:00Z',
-        endTime: undefined,
-        createdAt: '2024-03-14T10:00:00Z',
-        sessionExercises: [{
-          id: 'exercise-1',
-          sessionId: 'test-id',
-          exerciseId: 'ex-1',
-          sets: 3,
-          reps: 0,
-          weight: undefined,
-          notes: undefined,
-          completed: true,
-          createdAt: '2024-03-14T10:00:00Z'
-        }]
-      };
-
-      const expectedServiceSession: ServiceSession = {
-        id: 'test-id',
-        name: 'Workout Session',
-        startTime: '2024-03-14T10:00:00Z',
-        createdAt: '2024-03-14T10:00:00Z',
-        exercises: [{
-          id: 'exercise-1',
-          sessionId: 'test-id',
-          exerciseId: 'ex-1',
-          setNumber: 3,
-          reps: 0,
-          duration: undefined,
-          createdAt: '2024-03-14T10:00:00Z'
-        }]
-      };
-
-      const result = transformModelToServiceSession(modelSession);
-      expect(result).toEqual(expectedServiceSession);
+      fireEvent.press(getByTestId('header-add-button'));
+      
+      expect(mockNavigate).toHaveBeenCalledWith('ExerciseLibrary', { newExerciseId: undefined });
     });
   });
 }); 

@@ -32,10 +32,7 @@ export function ActiveSession({ session, onAddExercise }: ActiveSessionProps) {
         {session.sessionExercises.map(exercise => (
           <ExerciseSetGroup 
             key={exercise.id}
-            item={{
-              ...exercise,
-              setNumber: exercise.sets
-            }} 
+            item={exercise} 
             onExpand={() => {}}
             onOpenFullView={() => {}}
           />

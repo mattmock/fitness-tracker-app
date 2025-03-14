@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import type { SessionExercise } from '../db/services/sessionService';
+import type { SessionExercise } from '../db/models';
 import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
 import ExerciseSet from './ExerciseSet';
@@ -138,11 +138,15 @@ export function ExerciseSetGroup({ item, onExpand, onOpenFullView }: ExerciseIte
           actualReps={actualReps[i] ?? 0}
           actualWeight={weights[i] ?? 0}
           canBeUnchecked={canBeUnchecked}
+          duration={item.duration}
         />
       );
     }
     return sets;
   };
+
+  // Determine if this is a duration-based exercise
+  const isDurationExercise = item.duration !== undefined && item.duration > 0;
 
   return (
     <View style={styles.container}>
@@ -158,6 +162,9 @@ export function ExerciseSetGroup({ item, onExpand, onOpenFullView }: ExerciseIte
               <Text style={styles.setCount}>
                 {completedSets.size} sets
               </Text>
+              {isDurationExercise && (
+                <Text style={styles.duration}>{item.duration}s</Text>
+              )}
               <Animated.View style={[styles.arrow, getChevronRotation()]}>
                 <Ionicons 
                   name="chevron-down"
@@ -233,6 +240,15 @@ const styles = StyleSheet.create({
     color: '#666',
     fontWeight: '500',
   },
+  duration: {
+    fontSize: 15,
+    color: '#666',
+    fontWeight: '500',
+    backgroundColor: '#f0f0f0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
   arrow: {
     marginLeft: 4,
   },
@@ -252,26 +268,25 @@ const styles = StyleSheet.create({
   setInputHeaders: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
+    flex: 1,
   },
   headerText: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 14,
     color: '#666',
+    fontWeight: '500',
     width: 70,
     textAlign: 'center',
   },
   checkButtonPlaceholder: {
-    width: 32,  // Same as the checkButton's width (24 + 8 padding)
+    width: 32,
   },
   detailsButton: {
-    marginTop: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 2,
+    alignSelf: 'flex-start',
   },
   detailsLink: {
+    color: '#3b82f6',
     fontSize: 14,
-    color: '#007AFF',
     fontWeight: '500',
   },
 }); 

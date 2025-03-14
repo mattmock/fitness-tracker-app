@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import type { Session } from '../db/services/sessionService';
+import type { Session } from '../db/models';
 import { format } from 'date-fns';
 import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,16 +32,34 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
     }
   }, [expandedSessionId, exerciseService]);
 
-  const renderExerciseItem = (exercise: Session['exercises'][0]) => {
+  const renderExerciseItem = (exercise: Session['sessionExercises'][0]) => {
     const exerciseName = exerciseNames[exercise.exerciseId] || 'Loading...';
+    
+    // Determine what details to show based on available fields
+    let details = 'No details';
+    
+    if (exercise.duration) {
+      // Duration-based exercise
+      details = `${exercise.duration}s duration`;
+      if (exercise.setNumber) {
+        details = `${exercise.setNumber} sets × ${details}`;
+      }
+    } else if (exercise.reps || exercise.weight) {
+      // Weight/reps-based exercise
+      const setsText = exercise.setNumber ? `${exercise.setNumber} sets` : '';
+      const repsText = exercise.reps ? `${exercise.reps} reps` : '';
+      const weightText = exercise.weight ? `${exercise.weight}kg` : '';
+      
+      details = [setsText, repsText, weightText].filter(Boolean).join(' × ');
+      if (!details) {
+        details = 'No details';
+      }
+    }
+    
     return (
       <View style={styles.exerciseItem} key={exercise.id}>
         <Text style={styles.exerciseName}>{exerciseName}</Text>
-        <Text style={styles.exerciseDetails}>
-          {exercise.setNumber} sets {exercise.reps ? `× ${exercise.reps} reps` : ''}
-          {exercise.weight ? ` @ ${exercise.weight}kg` : ''}
-          {exercise.duration ? ` for ${exercise.duration}s` : ''}
-        </Text>
+        <Text style={styles.exerciseDetails}>{details}</Text>
       </View>
     );
   };
@@ -51,6 +69,10 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
     const formattedDate = format(date, 'MMM d, yyyy');
     const formattedTime = format(date, 'h:mm a');
     const isExpanded = expandedSessionId === item.id;
+
+    // Show up to 3 exercises, then "and X more" if there are more
+    const displayedExercises = item.sessionExercises.slice(0, 3);
+    const remainingCount = Math.max(0, item.sessionExercises.length - 3);
 
     return (
       <TouchableOpacity 
@@ -65,7 +87,7 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
           </View>
           <View style={styles.sessionSummary}>
             <Text style={styles.exerciseCount}>
-              {item.exercises.length} exercise{item.exercises.length !== 1 ? 's' : ''}
+              {item.sessionExercises.length} exercise{item.sessionExercises.length !== 1 ? 's' : ''}
             </Text>
             <Ionicons 
               name={isExpanded ? "chevron-up" : "chevron-down"} 
@@ -76,8 +98,11 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
         </View>
         
         {isExpanded && (
-          <View style={styles.exerciseList}>
-            {item.exercises.map(renderExerciseItem)}
+          <View style={styles.exercisesList}>
+            {displayedExercises.map(renderExerciseItem)}
+            {remainingCount > 0 && (
+              <Text style={styles.moreExercises}>and {remainingCount} more exercise{remainingCount > 1 ? 's' : ''}</Text>
+            )}
           </View>
         )}
       </TouchableOpacity>
@@ -152,7 +177,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  exerciseList: {
+  exercisesList: {
     marginTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
@@ -169,6 +194,11 @@ const styles = StyleSheet.create({
   exerciseDetails: {
     fontSize: 14,
     color: '#666',
+  },
+  moreExercises: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
   },
   seeAllButton: {
     backgroundColor: '#101112e5',

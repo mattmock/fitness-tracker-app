@@ -15,6 +15,7 @@ interface ExerciseSetProps {
   actualReps?: number;
   actualWeight?: number;
   canBeUnchecked?: boolean;
+  duration?: number;
 }
 
 const ExerciseSet: React.FC<ExerciseSetProps> = ({ 
@@ -28,7 +29,8 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
   onWeightChange,
   actualReps,
   actualWeight,
-  canBeUnchecked
+  canBeUnchecked,
+  duration
 }) => {
   const [repsInput, setRepsInput] = useState(actualReps?.toString() ?? '0');
   const [weightInput, setWeightInput] = useState(actualWeight?.toString() ?? '0');
@@ -50,6 +52,9 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
     onWeightChange?.(newWeight);
   };
 
+  // Check if this is a duration-based exercise
+  const isDurationExercise = duration !== undefined && duration > 0;
+
   return (
     <View style={[
       styles.setRow,
@@ -60,31 +65,39 @@ const ExerciseSet: React.FC<ExerciseSetProps> = ({
         !isActive && styles.completedSetNumber
       ]}>Set {index + 1}</Text>
       <View style={styles.setInputs}>
-        {isActive ? (
-          <SetValueInput
-            ref={weightInputRef}
-            value={weightInput}
-            onChangeText={handleWeightInputChange}
-            onPress={() => weightInputRef.current?.focus()}
-            accessibilityLabel={`Weight for set ${index + 1}`}
-          />
-        ) : (
-          <View style={styles.completedSetValue}>
-            <Text style={styles.setButtonText}>{actualWeight ?? 0}</Text>
+        {isDurationExercise ? (
+          <View style={styles.durationContainer}>
+            <Text style={styles.durationText}>{duration}s</Text>
           </View>
-        )}
-        {isActive ? (
-          <SetValueInput
-            ref={repsInputRef}
-            value={repsInput}
-            onChangeText={handleRepsInputChange}
-            onPress={() => repsInputRef.current?.focus()}
-            accessibilityLabel={`Reps for set ${index + 1}`}
-          />
         ) : (
-          <View style={styles.completedSetValue}>
-            <Text style={styles.setButtonText}>{actualReps ?? 0}</Text>
-          </View>
+          <>
+            {isActive ? (
+              <SetValueInput
+                ref={weightInputRef}
+                value={weightInput}
+                onChangeText={handleWeightInputChange}
+                onPress={() => weightInputRef.current?.focus()}
+                accessibilityLabel={`Weight for set ${index + 1}`}
+              />
+            ) : (
+              <View style={styles.completedSetValue}>
+                <Text style={styles.setButtonText}>{actualWeight ?? 0}</Text>
+              </View>
+            )}
+            {isActive ? (
+              <SetValueInput
+                ref={repsInputRef}
+                value={repsInput}
+                onChangeText={handleRepsInputChange}
+                onPress={() => repsInputRef.current?.focus()}
+                accessibilityLabel={`Reps for set ${index + 1}`}
+              />
+            ) : (
+              <View style={styles.completedSetValue}>
+                <Text style={styles.setButtonText}>{actualReps ?? 0}</Text>
+              </View>
+            )}
+          </>
         )}
         {(isActive || isCompleted) && (
           <TouchableOpacity 
@@ -151,6 +164,20 @@ const styles = StyleSheet.create({
   checkButton: {
     padding: 4,
   },
+  durationContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 8,
+    marginRight: 12,
+  },
+  durationText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#666',
+  }
 });
 
 export default ExerciseSet; 

@@ -383,6 +383,9 @@ describe('ExerciseLibraryScreen', () => {
             mockContext.sessionService.addExerciseToSession('session1', {
               exerciseId: '2',
               setNumber: 1,
+              reps: 10,
+              weight: 0,
+              completed: false,
             });
             mockNavigate('Home');
           }} 
@@ -403,6 +406,9 @@ describe('ExerciseLibraryScreen', () => {
       expect.objectContaining({
         exerciseId: '2',
         setNumber: 1,
+        reps: 10,
+        weight: 0,
+        completed: false,
       })
     );
     

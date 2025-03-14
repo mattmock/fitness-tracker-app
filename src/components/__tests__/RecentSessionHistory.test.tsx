@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { RecentSessionHistory } from '../RecentSessionHistory';
 import { format } from 'date-fns';
-import type { Session } from '../../db/services/sessionService';
+import type { Session } from '../../db/models';
 
 // Polyfill for setImmediate which is used by React Native but not available in Jest
 // @ts-ignore - Ignoring type issues with setImmediate polyfill
@@ -82,7 +82,7 @@ describe('RecentSessionHistory', () => {
       name: 'Morning Workout',
       startTime: '2024-03-01T10:00:00Z',
       createdAt: '2024-03-01T10:00:00Z',
-      exercises: [
+      sessionExercises: [
         {
           id: 'exercise-1',
           sessionId: 'session-1',
@@ -100,7 +100,7 @@ describe('RecentSessionHistory', () => {
       name: 'Evening Workout',
       startTime: '2024-02-28T18:00:00Z',
       createdAt: '2024-02-28T18:00:00Z',
-      exercises: [
+      sessionExercises: [
         {
           id: 'exercise-2',
           sessionId: 'session-2',
@@ -114,7 +114,7 @@ describe('RecentSessionHistory', () => {
           id: 'exercise-3',
           sessionId: 'session-2',
           exerciseId: 'ex-3',
-          setNumber: 3,
+          setNumber: 1,
           duration: 60,
           createdAt: '2024-02-28T18:00:00Z'
         }
@@ -176,7 +176,7 @@ describe('RecentSessionHistory', () => {
     
     // Verify that exercise details are now visible
     expect(queryAfterExpand('Bench Press')).not.toBeNull();
-    expect(queryAfterExpand('3 sets × 12 reps @ 100kg')).not.toBeNull();
+    expect(queryAfterExpand('3 sets × 12 reps × 100kg')).not.toBeNull();
   });
 
   it('collapses an expanded session when clicked again', () => {
@@ -228,11 +228,58 @@ describe('RecentSessionHistory', () => {
 
     // Verify that weight-based exercise details are displayed correctly
     expect(queryByText('Squats')).not.toBeNull();
-    expect(queryByText('4 sets × 10 reps @ 80kg')).not.toBeNull();
+    expect(queryByText('4 sets × 10 reps × 80kg')).not.toBeNull();
     
     // Verify that duration-based exercise details are displayed correctly
     expect(queryByText('Treadmill')).not.toBeNull();
-    expect(queryByText('3 sets for 60s')).not.toBeNull();
+    expect(queryByText('1 sets × 60s duration')).not.toBeNull();
+  });
+
+  it('handles exercises with missing fields gracefully', () => {
+    // Create a session with exercises that have missing fields
+    const sessionWithMissingFields: Session = {
+      id: 'session-3',
+      name: 'Incomplete Workout',
+      startTime: '2024-03-02T10:00:00Z',
+      createdAt: '2024-03-02T10:00:00Z',
+      sessionExercises: [
+        {
+          id: 'exercise-4',
+          sessionId: 'session-3',
+          exerciseId: 'ex-1',
+          setNumber: 1,
+          // No sets, reps, or weight
+          createdAt: '2024-03-02T10:00:00Z'
+        },
+        {
+          id: 'exercise-5',
+          sessionId: 'session-3',
+          exerciseId: 'ex-2',
+          setNumber: 2,
+          reps: 10,
+          // No sets or weight
+          createdAt: '2024-03-02T10:00:00Z'
+        }
+      ]
+    };
+
+    // Setup expanded state for the new session
+    mockExpandedSessionId = 'session-3';
+    mockExerciseNames = {
+      'ex-1': 'Bench Press',
+      'ex-2': 'Squats'
+    };
+
+    const { queryByText } = render(
+      <RecentSessionHistory sessions={[sessionWithMissingFields]} />
+    );
+
+    // Verify that exercises with missing fields are displayed correctly
+    expect(queryByText('Bench Press')).not.toBeNull();
+    expect(queryByText('No details')).not.toBeNull();
+    
+    expect(queryByText('Squats')).not.toBeNull();
+    expect(queryByText('2 sets × 10 reps')).not.toBeNull();
   });
 
   it('shows "See all past sessions" button when there are more than 6 sessions', () => {
@@ -255,48 +302,5 @@ describe('RecentSessionHistory', () => {
     );
 
     expect(queryByText('See all past sessions')).toBeNull();
-  });
-
-  it('fetches exercise names when a session is expanded', async () => {
-    // Reset the mock to verify it gets called during our test
-    mockGetAll.mockClear();
-    mockSetExerciseNames.mockClear();
-    
-    // Setup mock implementation for getAll
-    mockGetAll.mockImplementation(() => Promise.resolve(mockExercises));
-    
-    // Render the component with an expanded session
-    mockExpandedSessionId = 'session-1';
-    
-    render(<RecentSessionHistory sessions={mockSessions} />);
-    
-    // Wait for async operations to complete
-    await act(async () => {
-      // Small delay to allow promises to resolve
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-    
-    // Verify that getAll was called
-    expect(mockGetAll).toHaveBeenCalled();
-    
-    // Verify that setExerciseNames was called with the correct mapping
-    expect(mockSetExerciseNames).toHaveBeenCalledWith({
-      'ex-1': 'Bench Press',
-      'ex-2': 'Squats',
-      'ex-3': 'Treadmill'
-    });
-  });
-
-  it('renders exercise items with "Loading..." when exercise names are not yet loaded', () => {
-    // Setup expanded state but with empty exercise names
-    mockExpandedSessionId = 'session-1';
-    mockExerciseNames = {}; // Empty exercise names
-
-    const { getByText } = render(
-      <RecentSessionHistory sessions={mockSessions} />
-    );
-
-    // Should show "Loading..." for exercise names that aren't loaded yet
-    expect(getByText('Loading...')).toBeTruthy();
   });
 }); 

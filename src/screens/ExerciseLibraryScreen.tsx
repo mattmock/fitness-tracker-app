@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
-import { Session, SessionExercise } from '../db/services/sessionService';
+import { Session, SessionExercise } from '../db/models';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -65,40 +65,17 @@ export function ExerciseLibraryScreen() {
     React.useCallback(() => {
       const fetchActiveSession = async () => {
         try {
-          const sessions = await sessionService.getAll();
-          const today = new Date().toISOString().split('T')[0];
-          const todaysSessions = sessions.filter(session => 
-            session.startTime.startsWith(today)
-          );
+          const activeSessions = await sessionService.getAll();
+          const activeSession = activeSessions.find(s => !s.endTime);
           
-          if (todaysSessions.length > 0) {
-            const latestSession = todaysSessions[todaysSessions.length - 1];
-            setActiveSession({
-              id: latestSession.id,
-              name: latestSession.name
-            });
-            
-            // Fetch the full session details including exercises
-            const sessionDetails = await sessionService.getById(latestSession.id);
-            setCurrentSession(sessionDetails);
-            
-            // Extract exercise IDs from the current session
-            if (sessionDetails) {
-              const exerciseIds = sessionDetails.exercises.map(ex => ex.exerciseId);
-              setActiveSessionExerciseIds(exerciseIds);
-            } else {
-              setActiveSessionExerciseIds([]);
-            }
-          } else {
-            setActiveSession(null);
-            setCurrentSession(null);
-            setActiveSessionExerciseIds([]);
+          if (activeSession) {
+            setActiveSession(activeSession);
+            // Update to use sessionExercises instead of exercises
+            const exerciseIds = activeSession.sessionExercises.map(ex => ex.exerciseId);
+            setActiveSessionExerciseIds(exerciseIds);
           }
         } catch (error) {
           console.error('Error fetching active session:', error);
-          setActiveSession(null);
-          setCurrentSession(null);
-          setActiveSessionExerciseIds([]);
         }
       };
 
@@ -203,7 +180,7 @@ export function ExerciseLibraryScreen() {
 
         // Check which exercises are already in the session to avoid duplicates
         const existingExerciseIds = new Set(
-          currentSession.exercises.map(exercise => exercise.exerciseId)
+          currentSession.sessionExercises.map(exercise => exercise.exerciseId)
         );
 
         // Filter out exercises that are already in the session
@@ -223,6 +200,9 @@ export function ExerciseLibraryScreen() {
           await sessionService.addExerciseToSession(activeSession.id, {
             exerciseId: exercise.id,
             setNumber: 1,
+            reps: 10, // Add default reps value
+            weight: 0, // Add default weight value
+            completed: false, // Add default completed value
           });
         }));
       } else {
@@ -233,6 +213,9 @@ export function ExerciseLibraryScreen() {
         }, selectedExercisesList.map(exercise => ({
           exerciseId: exercise.id,
           setNumber: 1,
+          reps: 10, // Add default reps value
+          weight: 0, // Add default weight value
+          completed: false, // Add default completed value
         })));
       }
 

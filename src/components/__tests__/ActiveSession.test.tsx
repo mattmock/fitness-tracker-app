@@ -14,6 +14,7 @@ describe('ActiveSession', () => {
 
   const mockSession = {
     id: 'test-session',
+    name: 'Test Session',
     startTime: mockDate.toISOString(),
     createdAt: mockDate.toISOString(),
     sessionExercises: [
@@ -21,10 +22,9 @@ describe('ActiveSession', () => {
         id: 'exercise-1',
         sessionId: 'test-session',
         exerciseId: 'ex-1',
-        sets: 3,
+        setNumber: 1,
         reps: 12,
         weight: 50,
-        completed: false,
         createdAt: mockDate.toISOString()
       }
     ]
@@ -56,13 +56,7 @@ describe('ActiveSession', () => {
     // Verify ExerciseItem was called with correct props
     expect(ExerciseSetGroup).toHaveBeenCalledWith(
       {
-        item: {
-          ...mockSession.sessionExercises[0],
-          setNumber: 3,
-          sets: 3,
-          weight: 50,
-          sessionId: 'test-session'
-        },
+        item: mockSession.sessionExercises[0],
         onExpand: expect.any(Function),
         onOpenFullView: expect.any(Function)
       },

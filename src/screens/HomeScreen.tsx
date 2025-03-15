@@ -28,7 +28,7 @@ import { RecentSessionHistory } from '../components/RecentSessionHistory';
 
 // Hooks and types
 import { useDatabaseContext } from '../db';
-import type { Session } from '../db/models';
+import type { Session } from '../types/database';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 

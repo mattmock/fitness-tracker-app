@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import { RecentSessionHistory } from '../RecentSessionHistory';
 import { format } from 'date-fns';
-import type { Session } from '../../db/models';
+import type { Session } from '../../types/database';
 
 // Polyfill for setImmediate which is used by React Native but not available in Jest
 // @ts-ignore - Ignoring type issues with setImmediate polyfill

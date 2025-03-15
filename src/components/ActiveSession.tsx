@@ -7,7 +7,7 @@ import {
   ScrollView, 
   Platform
 } from 'react-native';
-import { Session } from '../db/models';
+import { Session } from '../types/database';
 import { ExerciseSetGroup } from './ExerciseSetGroup';
 
 interface ActiveSessionProps {

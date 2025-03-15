@@ -6,7 +6,7 @@ import {
   TouchableOpacity, 
   Image
 } from 'react-native';
-import { Session as ModelSession } from '../db/models';
+import { Session as ModelSession } from '../types/database';
 import { ActiveSession } from './ActiveSession';
 
 interface SessionContainerProps {

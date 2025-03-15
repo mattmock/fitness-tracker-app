@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import type { Session } from '../db/models';
+import type { Session } from '../types/database';
 import { format } from 'date-fns';
 import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';

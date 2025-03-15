@@ -1,4 +1,4 @@
-import { Exercise } from '../db/models';
+import { Exercise } from '../types/database';
 
 export type RootStackParamList = {
   Home: undefined;

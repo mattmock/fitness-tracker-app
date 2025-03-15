@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import type { SessionExercise } from '../db/models';
+import type { SessionExercise } from '../types/database';
 import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
 import ExerciseSet from './ExerciseSet';

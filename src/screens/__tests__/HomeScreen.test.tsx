@@ -23,7 +23,7 @@ import { act } from 'react-test-renderer';
 import { HomeScreen } from '../HomeScreen';
 
 // Types
-import type { Session } from '../../db/models';
+import type { Session } from '../../types/database';
 
 // Components used in tests
 import { SessionContainer } from '../../components/SessionContainer';

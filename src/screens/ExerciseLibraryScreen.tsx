@@ -3,14 +3,12 @@ import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Platform
 import { LoadingSpinner, BackButton, ExerciseTypeCard } from '../components';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDatabaseContext } from '../db';
-import type { Exercise } from '../db/services/exerciseService';
-import type { Routine } from '../db/services/routineService';
+import type { Exercise, Routine, Session, SessionExercise } from '../types/database';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
-import { Session, SessionExercise } from '../db/models';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -71,7 +69,7 @@ export function ExerciseLibraryScreen() {
           if (activeSession) {
             setActiveSession(activeSession);
             // Update to use sessionExercises instead of exercises
-            const exerciseIds = activeSession.sessionExercises.map(ex => ex.exerciseId);
+            const exerciseIds = activeSession.sessionExercises.map((ex: SessionExercise) => ex.exerciseId);
             setActiveSessionExerciseIds(exerciseIds);
           }
         } catch (error) {
@@ -180,7 +178,7 @@ export function ExerciseLibraryScreen() {
 
         // Check which exercises are already in the session to avoid duplicates
         const existingExerciseIds = new Set(
-          currentSession.sessionExercises.map(exercise => exercise.exerciseId)
+          currentSession.sessionExercises.map((exercise: SessionExercise) => exercise.exerciseId)
         );
 
         // Filter out exercises that are already in the session

@@ -1,5 +1,5 @@
 import { type SQLiteDatabase } from 'expo-sqlite';
-import { Session, SessionExercise } from '../models';
+import { Session, SessionExercise } from '../../types/database';
 
 interface SessionRow {
   id: string;

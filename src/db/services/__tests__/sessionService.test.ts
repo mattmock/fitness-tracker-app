@@ -1,6 +1,6 @@
 import { type SQLiteDatabase } from 'expo-sqlite';
 import { SessionService } from '../sessionService';
-import { type Session, type SessionExercise } from '../../models';
+import { type Session, type SessionExercise } from '../../../types/database';
 
 // Mock SQLiteDatabase
 class MockSQLiteDatabase implements Partial<SQLiteDatabase> {

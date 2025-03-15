@@ -1,12 +1,5 @@
 import { type SQLiteDatabase } from 'expo-sqlite';
-
-export interface Exercise {
-  id: string;
-  name: string;
-  category?: string;
-  description?: string;
-  createdAt: string;
-}
+import { Exercise } from '../../types/database';
 
 interface ExerciseRow {
   id: string;
@@ -22,9 +15,12 @@ function escapeSqlString(value: string): string {
 }
 
 // Helper function to convert value to SQL value string
-function toSqlValue(value: string | undefined | null): string {
+function toSqlValue(value: string | string[] | undefined | null): string {
   if (value === undefined || value === null) {
     return 'NULL';
+  }
+  if (Array.isArray(value)) {
+    return `'${JSON.stringify(value)}'`;
   }
   return `'${escapeSqlString(value)}'`;
 }

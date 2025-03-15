@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import type { Exercise, Routine, Session, SessionExercise } from '../models';
+import type { Exercise, Routine, Session, SessionExercise } from '../../types/database';
 import { ConfigService } from '../../config/ConfigService';
 
 // Exercise categories

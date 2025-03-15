@@ -1,12 +1,5 @@
 import { type SQLiteDatabase } from 'expo-sqlite';
-
-export interface Routine {
-  id: string;
-  name: string;
-  description?: string;
-  exerciseIds: string[];
-  createdAt: string;
-}
+import { Routine } from '../../types/database';
 
 interface RoutineRow {
   id: string;

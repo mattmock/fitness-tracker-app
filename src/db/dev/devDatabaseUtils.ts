@@ -38,11 +38,13 @@ export function useDevDatabase() {
   const db = useSQLiteContext();
 
   return {
+    getDatabaseCounts: () => getDatabaseCounts(db),
     clearDatabase: () => clearDatabase(db),
     clearTable: (table: TableName) => clearTable(db, table),
     updateRowCount: (table: TableName, count: number) => updateRowCount(db, table, count),
     resetDatabaseToDefault: () => resetDatabaseToDefault(db),
-    getCounts: () => getDatabaseCounts(db),
+    forceResetSchema: () => forceResetSchema(db),
+    checkTableSchema: (tableName: string) => checkTableSchema(db, tableName)
   };
 }
 
@@ -195,6 +197,36 @@ async function resetDatabaseToDefault(db: SQLiteDatabase): Promise<void> {
   ]);
   
   console.log('[Dev] Database reset complete');
+}
+
+/**
+ * Force resets the database schema by setting the user_version to 0
+ * and triggering a full schema recreation on next app start.
+ */
+async function forceResetSchema(db: SQLiteDatabase): Promise<void> {
+  try {
+    console.log('[Dev] Force resetting database schema...');
+    await db.execAsync('PRAGMA user_version = 0');
+    console.log('[Dev] Database schema reset. Restart the app to apply changes.');
+  } catch (error) {
+    console.error('[Dev] Failed to reset database schema:', error);
+    throw error;
+  }
+}
+
+/**
+ * Checks the schema of a specific table
+ */
+async function checkTableSchema(db: SQLiteDatabase, tableName: string): Promise<any[]> {
+  try {
+    console.log(`[Dev] Checking schema for table: ${tableName}`);
+    const result = await db.getAllAsync(`PRAGMA table_info(${tableName})`);
+    console.log(`[Dev] Table schema for ${tableName}:`, result);
+    return result;
+  } catch (error) {
+    console.error(`[Dev] Failed to check schema for table ${tableName}:`, error);
+    throw error;
+  }
 }
 
 // Export resetDatabaseToDefault for use in provider

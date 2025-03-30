@@ -61,7 +61,9 @@ describe('devDatabaseUtils', () => {
         clearTable: expect.any(Function),
         updateRowCount: expect.any(Function),
         resetDatabaseToDefault: expect.any(Function),
-        getCounts: expect.any(Function)
+        getDatabaseCounts: expect.any(Function),
+        forceResetSchema: expect.any(Function),
+        checkTableSchema: expect.any(Function)
       });
     });
   });
@@ -73,7 +75,7 @@ describe('devDatabaseUtils', () => {
         .mockResolvedValueOnce({ count: 10 }) // exercises
         .mockResolvedValueOnce({ count: 3 }); // routines
 
-      const counts = await devDb.getCounts();
+      const counts = await devDb.getDatabaseCounts();
       
       expect(counts).toEqual({
         sessions: 5,
@@ -85,7 +87,7 @@ describe('devDatabaseUtils', () => {
     it('handles null counts gracefully', async () => {
       mockDb.getFirstAsync.mockResolvedValue(null);
 
-      const counts = await devDb.getCounts();
+      const counts = await devDb.getDatabaseCounts();
       
       expect(counts).toEqual({
         sessions: 0,

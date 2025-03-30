@@ -5,7 +5,27 @@ import { type Session, type SessionExercise } from '../../../types/database';
 // Mock SQLiteDatabase
 class MockSQLiteDatabase implements Partial<SQLiteDatabase> {
   execAsync = jest.fn();
-  getAllAsync = jest.fn();
+  getAllAsync = jest.fn().mockImplementation((query: string) => {
+    // Mock response for the table schema query
+    if (query === 'PRAGMA table_info(session_exercises)') {
+      return Promise.resolve([
+        { cid: 0, name: 'session_id', type: 'TEXT', notnull: 1, dflt_value: null, pk: 0 },
+        { cid: 1, name: 'exercise_id', type: 'TEXT', notnull: 1, dflt_value: null, pk: 0 },
+        { cid: 2, name: 'set_number', type: 'INTEGER', notnull: 1, dflt_value: null, pk: 0 },
+        { cid: 3, name: 'reps', type: 'INTEGER', notnull: 0, dflt_value: null, pk: 0 },
+        { cid: 4, name: 'weight', type: 'REAL', notnull: 0, dflt_value: null, pk: 0 },
+        { cid: 5, name: 'duration', type: 'INTEGER', notnull: 0, dflt_value: null, pk: 0 },
+        { cid: 6, name: 'notes', type: 'TEXT', notnull: 0, dflt_value: null, pk: 0 },
+        { cid: 7, name: 'completed', type: 'INTEGER', notnull: 0, dflt_value: null, pk: 0 },
+        { cid: 8, name: 'created_at', type: 'TEXT', notnull: 1, dflt_value: null, pk: 0 },
+        { cid: 9, name: 'updated_at', type: 'TEXT', notnull: 0, dflt_value: null, pk: 0 }
+      ]);
+    }
+    return Promise.resolve([]);
+  });
+  getFirstAsync = jest.fn();
+  runAsync = jest.fn();
+  batchAsync = jest.fn();
 }
 
 describe('SessionService', () => {

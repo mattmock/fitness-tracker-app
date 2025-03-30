@@ -18,6 +18,9 @@ class MockSQLiteDatabase {
   runAsync = jest.fn().mockResolvedValue(undefined);
 }
 
+// Mock console.error
+const originalConsoleError = console.error;
+
 describe('Database Setup', () => {
   let mockDb: MockSQLiteDatabase;
   
@@ -27,6 +30,11 @@ describe('Database Setup', () => {
     
     // Create a new mock database instance
     mockDb = new MockSQLiteDatabase();
+    (migrateDatabase as jest.Mock).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    console.error = originalConsoleError;
   });
 
   describe('migrateDbIfNeeded', () => {
@@ -54,11 +62,20 @@ describe('Database Setup', () => {
     });
 
     it('handles migration errors', async () => {
+      // Mock console.error for this test
+      console.error = jest.fn();
+      
       const error = new Error('Migration failed');
       (migrateDatabase as jest.Mock).mockRejectedValueOnce(error);
-
-      await expect(migrateDbIfNeeded(mockDb as unknown as SQLiteDatabase))
-        .rejects.toThrow('Migration failed');
+      
+      // The function now catches and logs the error instead of throwing it
+      await migrateDbIfNeeded(mockDb as unknown as SQLiteDatabase);
+      
+      // Verify error was logged
+      expect(console.error).toHaveBeenCalledWith(
+        '[Provider] Error during database migration:',
+        error
+      );
     });
 
     it('executes database operations in correct order', async () => {

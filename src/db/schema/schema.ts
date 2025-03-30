@@ -4,7 +4,7 @@ import { indexes } from './indexes';
 export const DATABASE_NAME = 'fitness_tracker.db';
 
 export const schema = {
-  version: 1,
+  version: 2,
   statements: [
     `CREATE TABLE IF NOT EXISTS exercises (
       id TEXT PRIMARY KEY NOT NULL,
@@ -55,7 +55,9 @@ export const schema = {
       weight REAL,
       duration INTEGER,
       notes TEXT,
+      completed INTEGER,
       created_at TEXT NOT NULL,
+      updated_at TEXT,
       PRIMARY KEY (session_id, exercise_id, set_number),
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
       FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE

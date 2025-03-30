@@ -4,10 +4,6 @@ export { DatabaseProvider, useDatabaseContext } from './core/provider';
 
 // Service layer exports
 export {
-  Exercise,
-  Routine,
-  Session,
-  SessionExercise,
   ExerciseService,
   RoutineService,
   SessionService

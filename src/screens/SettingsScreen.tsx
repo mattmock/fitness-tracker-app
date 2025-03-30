@@ -7,7 +7,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useDevDatabase } from '../db/dev/devDatabaseUtils';
 import { BackButton } from '../components';
 import { useSQLiteContext } from 'expo-sqlite';
-import { SessionService } from '../db/services';
+import { SessionService } from '../db/services/sessionService';
 
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -95,7 +95,7 @@ export function SettingsScreen() {
   const fetchCounts = async () => {
     try {
       console.log('Fetching database counts...');
-      const dbCounts = await devDb.getCounts();
+      const dbCounts = await devDb.getDatabaseCounts();
       console.log('Received counts:', dbCounts);
       setCounts({
         sessions: dbCounts.sessions.toString(),
@@ -286,6 +286,41 @@ export function SettingsScreen() {
             onPress={handleResetDatabase}
           >
             <Text style={[styles.buttonText, styles.primaryButtonText]}>Reset Database</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: '#5856D6' }]}
+            onPress={() => {
+              Alert.alert(
+                'Force Reset Schema',
+                'This will reset the database schema to version 0, forcing a full recreation on next app start. Continue?',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                  {
+                    text: 'Reset Schema',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await devDb.forceResetSchema();
+                        Alert.alert(
+                          'Success',
+                          'Database schema reset. Please restart the app to apply changes.',
+                          [{ text: 'OK' }]
+                        );
+                      } catch (error) {
+                        console.error('Failed to reset schema:', error);
+                        Alert.alert('Error', 'Failed to reset schema');
+                      }
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Text style={styles.buttonText}>Force Reset Schema</Text>
           </TouchableOpacity>
         </View>
       </View>

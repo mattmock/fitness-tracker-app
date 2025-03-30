@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '../components';
-import type { Exercise } from '../db/services/exerciseService';
+import type { Exercise } from '../types/database';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';

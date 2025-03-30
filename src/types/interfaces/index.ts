@@ -3,4 +3,5 @@
  * Centralizes exports for easy importing
  */
 
-export * from './sessions'; 
+export * from './sessions';
+export * from './exercises'; 

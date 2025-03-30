@@ -1,4 +1,5 @@
 import { Exercise } from '../types/database';
+import { ExerciseListItem } from '../types/interfaces';
 
 export type RootStackParamList = {
   Home: undefined;

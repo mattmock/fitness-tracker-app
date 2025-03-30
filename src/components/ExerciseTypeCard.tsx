@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { ExerciseGroup } from '../types/interfaces';
 
 interface ExerciseTypeCardProps {
   title: string;
@@ -10,6 +11,10 @@ interface ExerciseTypeCardProps {
   testID?: string;
 }
 
+/**
+ * Card component that displays an exercise category with count information
+ * Used in the exercise library screen
+ */
 export function ExerciseTypeCard({ title, exerciseCount, selectedCount = 0, onPress, testID = "exercise-type-card" }: ExerciseTypeCardProps) {
   return (
     <TouchableOpacity 
@@ -36,6 +41,25 @@ export function ExerciseTypeCard({ title, exerciseCount, selectedCount = 0, onPr
       </View>
     </TouchableOpacity>
   );
+}
+
+// Creating a factory function to create ExerciseTypeCard props from ExerciseGroup
+export function createExerciseTypeCardProps(
+  group: ExerciseGroup, 
+  selectedExerciseIds: Set<string>,
+  onPress: () => void
+): ExerciseTypeCardProps {
+  const exerciseCount = group.exercises.length;
+  const selectedCount = group.exercises.filter(ex => 
+    selectedExerciseIds.has(ex.id)
+  ).length;
+  
+  return {
+    title: group.name,
+    exerciseCount,
+    selectedCount,
+    onPress
+  };
 }
 
 const styles = StyleSheet.create({

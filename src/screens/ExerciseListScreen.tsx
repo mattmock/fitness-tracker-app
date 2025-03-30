@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '../components';
 import type { Exercise } from '../types/database';
+import { ExerciseSelectionData, toExerciseSelectionData } from '../types/interfaces';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,15 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
   } = route.params;
   const [selectedExercises, setSelectedExercises] = React.useState<Set<string>>(new Set(initialSelectedExercises));
   const [localSelectedCount, setLocalSelectedCount] = React.useState(0);
+  
+  // Prepare exercise selection data for rendering
+  const getExerciseSelectionData = (exercises: Exercise[]): ExerciseSelectionData[] => {
+    return exercises.map(exercise => {
+      const isSelected = selectedExercises.has(exercise.id);
+      const isInActiveSession = activeSessionExerciseIds.includes(exercise.id);
+      return toExerciseSelectionData(exercise, isSelected, isInActiveSession);
+    });
+  };
   
   // Calculate the count of selected exercises that are NOT in the active session
   useEffect(() => {
@@ -57,50 +67,42 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
     navigation.goBack();
   };
 
-  const renderExerciseCard = ({ item }: { item: Exercise }) => {
-    const isSelected = selectedExercises.has(item.id);
-    const isInActiveSession = activeSessionExerciseIds.includes(item.id);
-    
+  const renderExerciseCard = ({ item }: { item: ExerciseSelectionData }) => {
     return (
       <TouchableOpacity 
         testID={`exercise-item-${item.id}`}
         style={[
           styles.card, 
-          isSelected && styles.selectedCard,
-          isInActiveSession && styles.activeSessionCard
+          item.selected && styles.selectedCard,
+          item.inActiveSession && styles.activeSessionCard
         ]}
         onPress={() => toggleExerciseSelection(item.id)}
-        activeOpacity={isInActiveSession && isSelected ? 1 : 0.7} // Disable press effect for hard-selected items
+        activeOpacity={item.inActiveSession && item.selected ? 1 : 0.7} // Disable press effect for hard-selected items
       >
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.titleContainer}>
               <View style={[
                 styles.checkbox, 
-                isSelected && styles.checkboxSelected,
-                isInActiveSession && isSelected && styles.checkboxActiveSession
+                item.selected && styles.checkboxSelected,
+                item.inActiveSession && item.selected && styles.checkboxActiveSession
               ]}>
-                {isSelected && (
+                {item.selected && (
                   <Ionicons 
                     name="checkmark" 
                     size={16} 
-                    color={isInActiveSession ? "#555" : "#007AFF"} 
+                    color={item.inActiveSession ? "#555" : "#007AFF"} 
                   />
                 )}
               </View>
               <Text style={styles.cardTitle}>{item.name}</Text>
-              {isInActiveSession && isSelected && (
+              {item.inActiveSession && item.selected && (
                 <View style={styles.activeSessionBadge}>
                   <Text style={styles.activeSessionBadgeText}>In Session</Text>
                 </View>
               )}
             </View>
           </View>
-          {item.description && (
-            <Text style={styles.cardDescription} numberOfLines={2}>
-              {item.description}
-            </Text>
-          )}
         </View>
       </TouchableOpacity>
     );
@@ -117,7 +119,7 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
       <Text style={styles.title}>{category}</Text>
       <FlatList
         testID="exercise-list"
-        data={exercises}
+        data={getExerciseSelectionData(exercises)}
         keyExtractor={(item) => item.id}
         renderItem={renderExerciseCard}
         contentContainerStyle={[

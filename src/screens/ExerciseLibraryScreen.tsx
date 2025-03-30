@@ -9,12 +9,15 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
+import { ExerciseGroup, groupExercisesByCategory } from '../types/interfaces';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ExerciseLibraryRouteProp = RouteProp<RootStackParamList, 'ExerciseLibrary'>;
 
-interface ExerciseGroup {
+// Keeping this interface temporarily for backward compatibility
+// Eventually all usages should be replaced with ExerciseGroup from interfaces
+interface ExerciseGroupLegacy {
   name: string;
   exercises: Exercise[];
 }
@@ -105,7 +108,8 @@ export function ExerciseLibraryScreen() {
     }, [exerciseService, routineService])
   );
 
-  const getExercisesByGroup = (): ExerciseGroup[] => {
+  // Use the existing getExercisesByGroup function, but rename it for clarity as we're phasing it out
+  const getExercisesByGroupLegacy = (): ExerciseGroupLegacy[] => {
     const groups = new Map<string, Exercise[]>();
     
     exercises.forEach(exercise => {
@@ -122,7 +126,13 @@ export function ExerciseLibraryScreen() {
     }));
   };
 
-  const handleGroupPress = (group: ExerciseGroup) => {
+  // New function that uses our interface
+  const getExerciseGroups = (): ExerciseGroup[] => {
+    return groupExercisesByCategory(exercises);
+  };
+
+  // Update handleGroupPress to work with our new groups
+  const handleGroupPress = (group: ExerciseGroupLegacy) => {
     // Make sure exercises in the active session are pre-selected
     const combinedSelectedExercises = new Set(selectedExercises);
     activeSessionExerciseIds.forEach(id => {
@@ -227,7 +237,7 @@ export function ExerciseLibraryScreen() {
 
   const renderExerciseGroups = () => (
     <FlatList
-      data={getExercisesByGroup()}
+      data={getExercisesByGroupLegacy()}
       keyExtractor={(item) => item.name}
       renderItem={({ item }) => {
         // Calculate how many exercises are selected in this group

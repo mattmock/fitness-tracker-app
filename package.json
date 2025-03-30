@@ -46,6 +46,7 @@
     "@types/react": "~18.3.12",
     "@types/react-test-renderer": "^19.0.0",
     "@types/testing-library__jest-dom": "^5.14.9",
+    "glob": "^11.0.1",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "jest-expo": "~52.0.5",
@@ -59,7 +60,9 @@
     "doctor": {
       "reactNativeDirectoryCheck": {
         "listUnknownPackages": false,
-        "exclude": ["react-native-keyboard-aware-scroll-view"]
+        "exclude": [
+          "react-native-keyboard-aware-scroll-view"
+        ]
       }
     }
   }

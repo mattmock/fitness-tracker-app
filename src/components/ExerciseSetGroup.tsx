@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import type { SessionExercise } from '../types/database';
+import { ExerciseSetData } from '../types/interfaces';
 import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
 import ExerciseSet from './ExerciseSet';
 
 interface ExerciseItemProps {
-  item: SessionExercise;
+  item: ExerciseSetData;
   onExpand: (expanded: boolean) => void;
   onOpenFullView: (exerciseId: string) => void;
 }

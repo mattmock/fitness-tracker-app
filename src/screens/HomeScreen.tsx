@@ -29,13 +29,14 @@ import { RecentSessionHistory } from '../components/RecentSessionHistory';
 // Hooks and types
 import { useDatabaseContext } from '../db';
 import type { Session } from '../types/database';
+import { SessionDisplay, toSessionDisplay } from '../types/interfaces';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
 export function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [activeSession, setActiveSession] = useState<Session | null>(null);
-  const [pastSessions, setPastSessions] = useState<Session[]>([]);
+  const [pastSessions, setPastSessions] = useState<SessionDisplay[]>([]);
   const { sessionService } = useDatabaseContext();
   
   // Calculate snap points based on session count
@@ -59,12 +60,12 @@ export function HomeScreen() {
           const todaysSessions = sessions.filter(session => 
             session.startTime.startsWith(today)
           );
-          const pastSessions = sessions.filter(session => 
+          const pastSessionsFull = sessions.filter(session => 
             !session.startTime.startsWith(today)
           );
           
           console.log('Today\'s sessions:', todaysSessions.length);
-          console.log('Past sessions:', pastSessions.length);
+          console.log('Past sessions:', pastSessionsFull.length);
 
           if (todaysSessions.length > 0) {
             setActiveSession(todaysSessions[todaysSessions.length - 1]);
@@ -72,7 +73,9 @@ export function HomeScreen() {
             setActiveSession(null);
           }
 
-          setPastSessions(pastSessions);
+          // Convert full Session objects to SessionDisplay objects
+          const pastSessionsDisplay = pastSessionsFull.map(toSessionDisplay);
+          setPastSessions(pastSessionsDisplay);
         } catch (error) {
           console.error('Error fetching sessions:', error);
         }

@@ -2,6 +2,8 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { SessionContainer } from '../SessionContainer';
 import { ActiveSession } from '../ActiveSession';
+import { ActiveSessionData, toActiveSessionData } from '../../types/interfaces';
+import { Session } from '../../types/database';
 
 // Mock the ActiveSession component
 jest.mock('../ActiveSession', () => ({
@@ -10,6 +12,17 @@ jest.mock('../ActiveSession', () => ({
 
 // Mock the image require
 jest.mock('../../../assets/images/dumbbells1.png', () => 'mocked-image');
+
+// Mock our interface adapter functions
+jest.mock('../../types/interfaces', () => ({
+  ...jest.requireActual('../../types/interfaces'),
+  toActiveSessionData: jest.fn((session) => ({
+    id: session.id,
+    name: session.name,
+    startTime: session.startTime,
+    sessionExercises: session.sessionExercises || []
+  }))
+}));
 
 describe('SessionContainer', () => {
   const mockOnAddExercise = jest.fn();
@@ -36,10 +49,18 @@ describe('SessionContainer', () => {
   });
 
   it('renders ActiveSession when activeSession is provided', () => {
-    const mockSession = {
+    const mockSession: Session = {
       id: 'test-session',
+      name: 'Test Session',
       startTime: '2024-03-14T10:00:00Z',
       createdAt: '2024-03-14T10:00:00Z',
+      sessionExercises: []
+    };
+
+    const expectedActiveSessionData: ActiveSessionData = {
+      id: 'test-session',
+      name: 'Test Session',
+      startTime: '2024-03-14T10:00:00Z',
       sessionExercises: []
     };
 
@@ -50,10 +71,13 @@ describe('SessionContainer', () => {
       />
     );
 
+    // Verify toActiveSessionData was called
+    expect(toActiveSessionData).toHaveBeenCalledWith(mockSession);
+
     // Verify ActiveSession was called with correct props
     expect(ActiveSession).toHaveBeenCalledWith(
       {
-        session: mockSession,
+        session: expectedActiveSessionData,
         onAddExercise: mockOnAddExercise
       },
       expect.any(Object)

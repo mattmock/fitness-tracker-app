@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Session as ModelSession } from '../types/database';
 import { ActiveSession } from './ActiveSession';
+import { toActiveSessionData } from '../types/interfaces';
 
 interface SessionContainerProps {
   activeSession: ModelSession | null;
@@ -36,10 +37,13 @@ export function SessionContainer({ activeSession, onAddExercise }: SessionContai
     );
   }
 
+  // Convert to ActiveSessionData before passing to ActiveSession
+  const activeSessionData = toActiveSessionData(activeSession);
+
   return (
     <View style={styles.container}>
       <ActiveSession 
-        session={activeSession}
+        session={activeSessionData}
         onAddExercise={onAddExercise}
       />
     </View>

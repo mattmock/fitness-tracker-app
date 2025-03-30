@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import type { Session } from '../types/database';
 import { format } from 'date-fns';
 import { useDatabaseContext } from '../db';
 import { Ionicons } from '@expo/vector-icons';
 import { useBottomSheet } from './PastSessionBottomSheet/BottomSheetContext';
+import { SessionDisplay, SessionExerciseDisplay } from '../types/interfaces';
 
 interface RecentSessionHistoryProps {
-  sessions: Session[];
+  sessions: SessionDisplay[];
 }
 
 export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
@@ -32,7 +32,7 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
     }
   }, [expandedSessionId, exerciseService]);
 
-  const renderExerciseItem = (exercise: Session['sessionExercises'][0]) => {
+  const renderExerciseItem = (exercise: SessionExerciseDisplay) => {
     const exerciseName = exerciseNames[exercise.exerciseId] || 'Loading...';
     
     // Determine what details to show based on available fields
@@ -64,7 +64,7 @@ export function RecentSessionHistory({ sessions }: RecentSessionHistoryProps) {
     );
   };
 
-  const renderSessionItem = ({ item }: { item: Session }) => {
+  const renderSessionItem = ({ item }: { item: SessionDisplay }) => {
     const date = new Date(item.startTime);
     const formattedDate = format(date, 'MMM d, yyyy');
     const formattedTime = format(date, 'h:mm a');

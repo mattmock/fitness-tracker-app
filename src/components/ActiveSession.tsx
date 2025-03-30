@@ -7,11 +7,11 @@ import {
   ScrollView, 
   Platform
 } from 'react-native';
-import { Session } from '../types/database';
+import { ActiveSessionData, toExerciseSetData } from '../types/interfaces';
 import { ExerciseSetGroup } from './ExerciseSetGroup';
 
 interface ActiveSessionProps {
-  session: Session;
+  session: ActiveSessionData;
   onAddExercise: () => void;
 }
 
@@ -32,7 +32,7 @@ export function ActiveSession({ session, onAddExercise }: ActiveSessionProps) {
         {session.sessionExercises.map(exercise => (
           <ExerciseSetGroup 
             key={exercise.id}
-            item={exercise} 
+            item={toExerciseSetData(exercise)} 
             onExpand={() => {}}
             onOpenFullView={() => {}}
           />

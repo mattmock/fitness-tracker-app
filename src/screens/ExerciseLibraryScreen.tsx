@@ -9,7 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
-import { ExerciseGroup, groupExercisesByCategory } from '../types/interfaces';
+import { ExerciseGroup, groupExercisesByCategory, RoutineListItem, toRoutineListItem } from '../types/interfaces';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -26,6 +26,7 @@ export function ExerciseLibraryScreen() {
   const { exerciseService, sessionService, routineService } = useDatabaseContext();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
+  const [routineListItems, setRoutineListItems] = useState<RoutineListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('exercises');
   const [selectedExercises, setSelectedExercises] = useState<Set<string>>(new Set());
@@ -96,6 +97,8 @@ export function ExerciseLibraryScreen() {
           ]);
           setExercises(exercisesData);
           setRoutines(routinesData);
+          // Convert routines to RoutineListItems
+          setRoutineListItems(routinesData.map(routine => toRoutineListItem(routine)));
         } catch (error) {
           console.error('Failed to fetch data:', error);
           setError('Failed to load data. Please try again.');
@@ -213,6 +216,10 @@ export function ExerciseLibraryScreen() {
             completed: false, // Add default completed value
           });
         }));
+
+        // Clear selected exercises and navigate back to home
+        setSelectedExercises(new Set());
+        navigation.navigate('Home');
       } else {
         // Create a new session with the selected exercises
         await sessionService.create({
@@ -266,17 +273,17 @@ export function ExerciseLibraryScreen() {
     />
   );
 
-  const renderRoutineCard = ({ item }: { item: Routine }) => (
+  const renderRoutineCard = ({ item }: { item: RoutineListItem }) => (
     <ExerciseTypeCard
       title={item.name}
-      exerciseCount={item.exerciseIds.length}
+      exerciseCount={item.exerciseCount}
       onPress={() => {/* TODO: Handle routine press */}}
     />
   );
 
   const renderRoutineGroups = () => (
     <FlatList
-      data={routines}
+      data={routineListItems}
       keyExtractor={(item) => item.id}
       renderItem={renderRoutineCard}
       ListEmptyComponent={
@@ -328,7 +335,11 @@ export function ExerciseLibraryScreen() {
           }}
         />
       </View>
-      <View style={styles.tabContainer}>
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>Exercise Library</Text>
+      </View>
+      
+      <View style={styles.tabsContainer}>
         <TouchableOpacity 
           testID="exercises-tab"
           style={[
@@ -337,10 +348,12 @@ export function ExerciseLibraryScreen() {
           ]}
           onPress={() => setActiveTab('exercises')}
         >
-          <Text style={[
-            styles.tabText,
-            activeTab === 'exercises' && styles.activeTabText
-          ]}>
+          <Text 
+            style={[
+              styles.tabText, 
+              activeTab === 'exercises' && styles.activeTabText
+            ]}
+          >
             Exercises
           </Text>
         </TouchableOpacity>
@@ -352,17 +365,19 @@ export function ExerciseLibraryScreen() {
           ]}
           onPress={() => setActiveTab('routines')}
         >
-          <Text style={[
-            styles.tabText,
-            activeTab === 'routines' && styles.activeTabText
-          ]}>
+          <Text 
+            style={[
+              styles.tabText, 
+              activeTab === 'routines' && styles.activeTabText
+            ]}
+          >
             Routines
           </Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.content}>
-        {renderTabContent()}
-      </View>
+
+      {renderTabContent()}
+      
       {showAddButton && (
         <SafeAreaView edges={['bottom']} style={styles.bottomContainer}>
           <TouchableOpacity 
@@ -371,11 +386,11 @@ export function ExerciseLibraryScreen() {
             onPress={handleAddToSession}
           >
             <View style={styles.addButtonContent}>
+              <Ionicons name="add-circle" size={20} color="#fff" />
               <Text style={styles.addButtonText}>
                 {activeSession 
-                  ? `Add to workout (${newSelectionsCount})`
-                  : `Start workout (${newSelectionsCount})`
-                }
+                  ? `Add ${newSelectionsCount} to "${activeSession.name}"` 
+                  : `Start with ${newSelectionsCount}`}
               </Text>
             </View>
           </TouchableOpacity>
@@ -410,7 +425,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     minHeight: 48,
   },
-  tabContainer: {
+  titleContainer: {
+    padding: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 8,

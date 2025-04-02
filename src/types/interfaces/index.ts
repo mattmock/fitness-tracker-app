@@ -4,4 +4,5 @@
  */
 
 export * from './sessions';
-export * from './exercises'; 
+export * from './exercises';
+export * from './routines'; 

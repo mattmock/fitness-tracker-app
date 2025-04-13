@@ -4,6 +4,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { ExerciseListScreen } from '../ExerciseListScreen';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
+import { ExerciseSelectionData } from '../../types/interfaces';
+import { RouteProp } from '@react-navigation/native';
 
 // Mock the navigation
 const mockNavigation = {
@@ -12,20 +14,31 @@ const mockNavigation = {
 };
 
 // Mock the route
-const createMockRoute = (params = {}) => ({
-  params: {
+const createMockRoute = (params = {}) => {
+  const createExercise = (id: string, selected = false, inActiveSession = false): ExerciseSelectionData => ({
+    id,
+    name: `Exercise ${id}`,
     category: 'Test Category',
-    exercises: [
-      { id: '1', name: 'Exercise 1', category: 'Test Category' },
-      { id: '2', name: 'Exercise 2', category: 'Test Category' },
-      { id: '3', name: 'Exercise 3', category: 'Test Category' },
-    ],
-    selectedExercises: [],
-    activeSessionExerciseIds: [],
-    onExercisesSelected: jest.fn(),
-    ...params,
-  },
-});
+    selected,
+    inActiveSession,
+    tags: []
+  });
+
+  const defaultExercises = [
+    createExercise('1'),
+    createExercise('2'),
+    createExercise('3')
+  ];
+
+  return {
+    params: {
+      category: 'Test Category',
+      exercises: defaultExercises,
+      onExercisesSelected: jest.fn(),
+      ...params,
+    },
+  };
+};
 
 // Mock the components
 jest.mock('../../components', () => ({
@@ -85,13 +98,22 @@ describe('ExerciseListScreen', () => {
       fireEvent.press(getByTestId('exercise-item-1'));
     });
     
+    // Press the Select button to trigger selection callback
+    await act(async () => {
+      fireEvent.press(getByTestId('select-exercises-button'));
+    });
+    
     // The onExercisesSelected should be called with the selected exercise
     expect(mockRoute.params.onExercisesSelected).toHaveBeenCalledWith(['1']);
   });
 
   it('pre-selects exercises from initialSelectedExercises', async () => {
     const mockRoute = createMockRoute({
-      selectedExercises: ['1', '2'],
+      exercises: [
+        { id: '1', name: 'Exercise 1', category: 'Test Category', selected: true, inActiveSession: false, tags: [] },
+        { id: '2', name: 'Exercise 2', category: 'Test Category', selected: true, inActiveSession: false, tags: [] },
+        { id: '3', name: 'Exercise 3', category: 'Test Category', selected: false, inActiveSession: false, tags: [] }
+      ]
     });
     
     const { getByTestId } = render(
@@ -108,14 +130,22 @@ describe('ExerciseListScreen', () => {
       fireEvent.press(getByTestId('exercise-item-1'));
     });
     
+    // Press back to trigger selection callback
+    await act(async () => {
+      fireEvent.press(getByTestId('back-button'));
+    });
+    
     // The onExercisesSelected should be called with only the remaining selected exercise
     expect(mockRoute.params.onExercisesSelected).toHaveBeenCalledWith(['2']);
   });
 
   it('prevents deselection of exercises in active session', async () => {
     const mockRoute = createMockRoute({
-      selectedExercises: ['1', '2'],
-      activeSessionExerciseIds: ['1'], // Exercise 1 is in the active session
+      exercises: [
+        { id: '1', name: 'Exercise 1', category: 'Test Category', selected: true, inActiveSession: true, tags: [] },
+        { id: '2', name: 'Exercise 2', category: 'Test Category', selected: true, inActiveSession: false, tags: [] },
+        { id: '3', name: 'Exercise 3', category: 'Test Category', selected: false, inActiveSession: false, tags: [] }
+      ]
     });
     
     const { getByTestId } = render(
@@ -132,22 +162,27 @@ describe('ExerciseListScreen', () => {
       fireEvent.press(getByTestId('exercise-item-1'));
     });
     
-    // The onExercisesSelected should NOT be called with a list excluding exercise 1
-    expect(mockRoute.params.onExercisesSelected).not.toHaveBeenCalledWith(['2']);
-    
     // Try to deselect exercise 2 (not in active session)
     await act(async () => {
       fireEvent.press(getByTestId('exercise-item-2'));
     });
     
-    // The onExercisesSelected should be called with a list excluding exercise 2
-    expect(mockRoute.params.onExercisesSelected).toHaveBeenCalledWith(['1']);
+    // Press back to trigger selection callback
+    await act(async () => {
+      fireEvent.press(getByTestId('back-button'));
+    });
+    
+    // The onExercisesSelected should be called with only newly selected exercises
+    expect(mockRoute.params.onExercisesSelected).toHaveBeenCalledWith([]);
   });
 
   it('only shows count of new selections in the Select button', async () => {
     const mockRoute = createMockRoute({
-      selectedExercises: ['1', '2', '3'],
-      activeSessionExerciseIds: ['1'], // Exercise 1 is in the active session
+      exercises: [
+        { id: '1', name: 'Exercise 1', category: 'Test Category', selected: true, inActiveSession: true, tags: [] },
+        { id: '2', name: 'Exercise 2', category: 'Test Category', selected: true, inActiveSession: false, tags: [] },
+        { id: '3', name: 'Exercise 3', category: 'Test Category', selected: true, inActiveSession: false, tags: [] }
+      ]
     });
     
     const { getByTestId, getByText } = render(
@@ -159,7 +194,7 @@ describe('ExerciseListScreen', () => {
 
     await waitForComponentToLoad();
 
-    // The Select button should show a count of 2 (not 3)
+    // The Select button should show a count of 2 (not 3, since one is in active session)
     expect(getByText('Select 2')).toBeTruthy();
     
     // Deselect exercise 2
@@ -194,34 +229,34 @@ describe('ExerciseListScreen', () => {
     expect(mockRoute.params.onExercisesSelected).toHaveBeenCalledWith([]);
   });
 
-  it('keeps selections when Select button is pressed', async () => {
-    const mockRoute = createMockRoute({
-      selectedExercises: ['2'],
-    });
-    
+  it('keeps selections when Select button is pressed', () => {
+    const mockRoute = {
+      params: {
+        category: 'Test Category',
+        exercises: [
+          { id: '1', name: 'Exercise 1', category: 'Test Category', selected: false, inActiveSession: false, tags: [] },
+          { id: '2', name: 'Exercise 2', category: 'Test Category', selected: false, inActiveSession: false, tags: [] },
+          { id: '3', name: 'Exercise 3', category: 'Test Category', selected: false, inActiveSession: false, tags: [] },
+        ],
+        onExercisesSelected: jest.fn(),
+      },
+      key: 'test-key',
+      name: 'ExerciseList',
+    } as RouteProp<RootStackParamList, 'ExerciseList'>;
+
     const { getByTestId } = render(
-      <ExerciseListScreen 
-        navigation={mockNavigation as any} 
-        route={mockRoute as any} 
-      />
+      <ExerciseListScreen route={mockRoute} navigation={mockNavigation as any} />
     );
 
-    await waitForComponentToLoad();
-
-    // Select another exercise
-    await act(async () => {
-      fireEvent.press(getByTestId('exercise-item-3'));
-    });
+    // First select exercise 1
+    fireEvent.press(getByTestId('exercise-item-1'));
+    // Then select exercise 2
+    fireEvent.press(getByTestId('exercise-item-2'));
     
     // Press the Select button
-    await act(async () => {
-      fireEvent.press(getByTestId('select-exercises-button'));
-    });
+    fireEvent.press(getByTestId('select-exercises-button'));
     
-    // Should call navigation.goBack
-    expect(mockNavigation.goBack).toHaveBeenCalled();
-    
-    // Should NOT restore original selections (unlike back button)
-    expect(mockRoute.params.onExercisesSelected).not.toHaveBeenCalledWith(['2']);
+    // Should keep selections in the order they were selected
+    expect(mockRoute.params.onExercisesSelected).toHaveBeenCalledWith(['1', '2']);
   });
 }); 

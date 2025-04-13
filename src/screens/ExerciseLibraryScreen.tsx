@@ -12,10 +12,12 @@ import { RouteProp } from '@react-navigation/native';
 import { 
   ExerciseGroup, 
   ExerciseListItem,
+  ExerciseSelectionData,
   groupExercisesByCategory, 
   RoutineListItem, 
   toRoutineListItem,
-  toExerciseListItem 
+  toExerciseListItem,
+  toExerciseSelectionData
 } from '../types/interfaces';
 
 type TabType = 'exercises' | 'routines';
@@ -127,13 +129,26 @@ export function ExerciseLibraryScreen() {
       combinedSelectedExercises.add(id);
     });
     
+    // Get exercises for this category and convert to selection data
+    const categoryExercises = exercises.filter(ex => 
+      ex.category === group.name || (!ex.category && group.name === 'Uncategorized')
+    );
+    
+    const exerciseSelectionData = categoryExercises.map(exercise => 
+      toExerciseSelectionData(
+        exercise,
+        combinedSelectedExercises.has(exercise.id),
+        activeSessionExerciseIds.includes(exercise.id)
+      )
+    );
+    
     navigation.navigate('ExerciseList', {
       category: group.name,
-      exercises: exercises.filter(ex => ex.category === group.name || (!ex.category && group.name === 'Uncategorized')),
-      selectedExercises: Array.from(combinedSelectedExercises),
-      activeSessionExerciseIds,
+      exercises: exerciseSelectionData,
       onExercisesSelected: (newSelectedExercises: string[]) => {
-        setSelectedExercises(new Set(newSelectedExercises));
+        // Filter out exercises that are in active session before updating selected state
+        const newSelections = newSelectedExercises.filter(id => !activeSessionExerciseIds.includes(id));
+        setSelectedExercises(new Set(newSelections));
       }
     });
   };
@@ -233,7 +248,10 @@ export function ExerciseLibraryScreen() {
       keyExtractor={(item) => item.name}
       renderItem={({ item }) => {
         // Calculate how many exercises are selected in this group
-        const selectedInGroup = item.exercises.filter(ex => selectedExercises.has(ex.id)).length;
+        // Include both manually selected exercises and those in active session
+        const selectedInGroup = item.exercises.filter(ex => 
+          selectedExercises.has(ex.id) || activeSessionExerciseIds.includes(ex.id)
+        ).length;
         
         return (
           <ExerciseTypeCard

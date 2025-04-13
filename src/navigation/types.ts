@@ -1,5 +1,5 @@
 import { Exercise } from '../types/database';
-import { ExerciseListItem } from '../types/interfaces';
+import { ExerciseListItem, ExerciseSelectionData } from '../types/interfaces';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -10,9 +10,7 @@ export type RootStackParamList = {
   PlateCalculator: undefined;
   ExerciseList: {
     category: string;
-    exercises: Exercise[];
-    selectedExercises: string[];
-    activeSessionExerciseIds?: string[];
+    exercises: ExerciseSelectionData[];
     onExercisesSelected: (selectedExercises: string[]) => void;
   };
   AddExercise: undefined;

@@ -2,8 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackButton } from '../components';
-import type { Exercise } from '../types/database';
-import { ExerciseSelectionData, toExerciseSelectionData } from '../types/interfaces';
+import { ExerciseSelectionData } from '../types/interfaces';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,43 +12,39 @@ import { useFocusEffect } from '@react-navigation/native';
 type ExerciseListScreenProps = NativeStackScreenProps<RootStackParamList, 'ExerciseList'>;
 
 export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProps) {
-  const { 
-    category, 
-    exercises, 
-    selectedExercises: initialSelectedExercises, 
-    activeSessionExerciseIds = [], // New prop for exercises in active session
-    onExercisesSelected 
-  } = route.params;
-  const [selectedExercises, setSelectedExercises] = React.useState<Set<string>>(new Set(initialSelectedExercises));
+  const { category, exercises, onExercisesSelected } = route.params;
+  const [selectedExercises, setSelectedExercises] = React.useState<Set<string>>(
+    new Set(exercises.filter(ex => ex.selected || ex.inActiveSession).map(ex => ex.id))
+  );
   const [localSelectedCount, setLocalSelectedCount] = React.useState(0);
-  
-  // Prepare exercise selection data for rendering
-  const getExerciseSelectionData = (exercises: Exercise[]): ExerciseSelectionData[] => {
-    return exercises.map(exercise => {
-      const isSelected = selectedExercises.has(exercise.id);
-      const isInActiveSession = activeSessionExerciseIds.includes(exercise.id);
-      return toExerciseSelectionData(exercise, isSelected, isInActiveSession);
-    });
-  };
   
   // Calculate the count of selected exercises that are NOT in the active session
   useEffect(() => {
-    const newCount = Array.from(selectedExercises).filter(id => 
-      !activeSessionExerciseIds.includes(id)
-    ).length;
+    const newCount = Array.from(selectedExercises).filter(id => {
+      const exercise = exercises.find(ex => ex.id === id);
+      // Only count exercises that are selected AND not in active session
+      return exercise && !exercise.inActiveSession;
+    }).length;
     setLocalSelectedCount(newCount);
-  }, [selectedExercises, activeSessionExerciseIds]);
+  }, [selectedExercises, exercises]);
 
   const handleBackPress = () => {
-    // Restore original selections when going back
-    onExercisesSelected(initialSelectedExercises);
+    // When going back, only include newly selected exercises
+    const finalSelection = Array.from(selectedExercises).filter(id => {
+      const exercise = exercises.find(ex => ex.id === id);
+      return exercise && !exercise.inActiveSession;
+    });
+    onExercisesSelected(finalSelection);
     navigation.goBack();
   };
 
   const toggleExerciseSelection = (exerciseId: string) => {
+    const exercise = exercises.find(ex => ex.id === exerciseId);
+    if (!exercise) return;
+
     // Don't allow deselection of exercises in active session
-    if (activeSessionExerciseIds.includes(exerciseId) && selectedExercises.has(exerciseId)) {
-      return; // Exercise is in active session and already selected, so don't toggle
+    if (exercise.inActiveSession) {
+      return; // Exercise is in active session, don't allow toggling
     }
 
     const newSelection = new Set(selectedExercises);
@@ -59,35 +54,41 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
       newSelection.add(exerciseId);
     }
     setSelectedExercises(newSelection);
-    onExercisesSelected(Array.from(newSelection));
   };
 
   const handleSelectAndGoBack = () => {
-    // Keep current selections when using the select button
+    // Only include newly selected exercises when using the select button
+    const finalSelection = Array.from(selectedExercises).filter(id => {
+      const exercise = exercises.find(ex => ex.id === id);
+      return exercise && !exercise.inActiveSession;
+    });
+    onExercisesSelected(finalSelection);
     navigation.goBack();
   };
 
   const renderExerciseCard = ({ item }: { item: ExerciseSelectionData }) => {
+    const isSelected = selectedExercises.has(item.id);
+    
     return (
       <TouchableOpacity 
         testID={`exercise-item-${item.id}`}
         style={[
           styles.card, 
-          item.selected && styles.selectedCard,
+          isSelected && styles.selectedCard,
           item.inActiveSession && styles.activeSessionCard
         ]}
         onPress={() => toggleExerciseSelection(item.id)}
-        activeOpacity={item.inActiveSession && item.selected ? 1 : 0.7} // Disable press effect for hard-selected items
+        activeOpacity={item.inActiveSession && isSelected ? 1 : 0.7} // Disable press effect for hard-selected items
       >
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <View style={styles.titleContainer}>
               <View style={[
                 styles.checkbox, 
-                item.selected && styles.checkboxSelected,
-                item.inActiveSession && item.selected && styles.checkboxActiveSession
+                isSelected && styles.checkboxSelected,
+                item.inActiveSession && isSelected && styles.checkboxActiveSession
               ]}>
-                {item.selected && (
+                {isSelected && (
                   <Ionicons 
                     name="checkmark" 
                     size={16} 
@@ -96,7 +97,7 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
                 )}
               </View>
               <Text style={styles.cardTitle}>{item.name}</Text>
-              {item.inActiveSession && item.selected && (
+              {item.inActiveSession && isSelected && (
                 <View style={styles.activeSessionBadge}>
                   <Text style={styles.activeSessionBadgeText}>In Session</Text>
                 </View>
@@ -119,7 +120,7 @@ export function ExerciseListScreen({ route, navigation }: ExerciseListScreenProp
       <Text style={styles.title}>{category}</Text>
       <FlatList
         testID="exercise-list"
-        data={getExerciseSelectionData(exercises)}
+        data={exercises}
         keyExtractor={(item) => item.id}
         renderItem={renderExerciseCard}
         contentContainerStyle={[

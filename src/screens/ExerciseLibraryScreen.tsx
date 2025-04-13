@@ -9,22 +9,23 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp } from '@react-navigation/native';
-import { ExerciseGroup, groupExercisesByCategory, RoutineListItem, toRoutineListItem } from '../types/interfaces';
+import { 
+  ExerciseGroup, 
+  ExerciseListItem,
+  groupExercisesByCategory, 
+  RoutineListItem, 
+  toRoutineListItem,
+  toExerciseListItem 
+} from '../types/interfaces';
 
 type TabType = 'exercises' | 'routines';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ExerciseLibraryRouteProp = RouteProp<RootStackParamList, 'ExerciseLibrary'>;
 
-// Keeping this interface temporarily for backward compatibility
-// Eventually all usages should be replaced with ExerciseGroup from interfaces
-interface ExerciseGroupLegacy {
-  name: string;
-  exercises: Exercise[];
-}
-
 export function ExerciseLibraryScreen() {
   const { exerciseService, sessionService, routineService } = useDatabaseContext();
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [exerciseListItems, setExerciseListItems] = useState<ExerciseListItem[]>([]);
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [routineListItems, setRoutineListItems] = useState<RoutineListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +97,10 @@ export function ExerciseLibraryScreen() {
             routineService.getAll()
           ]);
           setExercises(exercisesData);
+          // Convert exercises to list items
+          setExerciseListItems(exercisesData.map(exercise => toExerciseListItem(exercise)));
           setRoutines(routinesData);
-          // Convert routines to RoutineListItems
+          // Convert routines to list items
           setRoutineListItems(routinesData.map(routine => toRoutineListItem(routine)));
         } catch (error) {
           console.error('Failed to fetch data:', error);
@@ -111,31 +114,13 @@ export function ExerciseLibraryScreen() {
     }, [exerciseService, routineService])
   );
 
-  // Use the existing getExercisesByGroup function, but rename it for clarity as we're phasing it out
-  const getExercisesByGroupLegacy = (): ExerciseGroupLegacy[] => {
-    const groups = new Map<string, Exercise[]>();
-    
-    exercises.forEach(exercise => {
-      const group = exercise.category || 'Other';
-      if (!groups.has(group)) {
-        groups.set(group, []);
-      }
-      groups.get(group)?.push(exercise);
-    });
-
-    return Array.from(groups.entries()).map(([name, exercises]) => ({
-      name,
-      exercises
-    }));
-  };
-
   // New function that uses our interface
   const getExerciseGroups = (): ExerciseGroup[] => {
-    return groupExercisesByCategory(exercises);
+    return groupExercisesByCategory(exerciseListItems);
   };
 
   // Update handleGroupPress to work with our new groups
-  const handleGroupPress = (group: ExerciseGroupLegacy) => {
+  const handleGroupPress = (group: ExerciseGroup) => {
     // Make sure exercises in the active session are pre-selected
     const combinedSelectedExercises = new Set(selectedExercises);
     activeSessionExerciseIds.forEach(id => {
@@ -144,9 +129,9 @@ export function ExerciseLibraryScreen() {
     
     navigation.navigate('ExerciseList', {
       category: group.name,
-      exercises: group.exercises,
+      exercises: exercises.filter(ex => ex.category === group.name || (!ex.category && group.name === 'Uncategorized')),
       selectedExercises: Array.from(combinedSelectedExercises),
-      activeSessionExerciseIds, // Pass the active session exercise IDs
+      activeSessionExerciseIds,
       onExercisesSelected: (newSelectedExercises: string[]) => {
         setSelectedExercises(new Set(newSelectedExercises));
       }
@@ -244,7 +229,7 @@ export function ExerciseLibraryScreen() {
 
   const renderExerciseGroups = () => (
     <FlatList
-      data={getExercisesByGroupLegacy()}
+      data={getExerciseGroups()}
       keyExtractor={(item) => item.name}
       renderItem={({ item }) => {
         // Calculate how many exercises are selected in this group

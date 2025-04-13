@@ -1,25 +1,55 @@
 /**
- * Specialized exercise interfaces based on different use cases.
- * This implements the Interface Segregation Principle.
+ * Specialized interfaces for Exercise types following the Interface Segregation Principle.
+ * Each interface contains only the properties needed for its specific use case.
  */
+
 import { Exercise } from '../database';
 
 /**
- * Represents an exercise in a list or selection view.
- * Contains only the properties needed for display in lists.
+ * Represents an exercise in a list view with minimal properties.
  */
 export interface ExerciseListItem {
-  /** Unique identifier for the exercise */
   id: string;
-  
-  /** Name of the exercise */
   name: string;
-  
-  /** Optional category for grouping exercises */
-  category?: string;
-  
-  /** Optional description (may be truncated in UI) */
+  category: string | undefined;
+  tags?: string[];
+}
+
+/**
+ * Represents detailed information about an exercise.
+ */
+export interface ExerciseDetail {
+  id: string;
+  name: string;
   description?: string;
+  category?: string;
+  tags?: string[];
+  variations?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/**
+ * Data needed when selecting an exercise for a workout.
+ */
+export interface ExerciseSelectionData {
+  id: string;
+  name: string;
+  category?: string;
+  tags?: string[];
+  selected?: boolean;
+  inActiveSession?: boolean;
+}
+
+/**
+ * Data needed when creating or editing an exercise.
+ */
+export interface ExerciseFormData {
+  name: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  variations?: string[];
 }
 
 /**
@@ -35,84 +65,19 @@ export interface ExerciseGroup {
 }
 
 /**
- * Detailed exercise information for full view.
- * Contains all properties needed for detailed display.
- */
-export interface ExerciseDetail {
-  /** Unique identifier for the exercise */
-  id: string;
-  
-  /** Name of the exercise */
-  name: string;
-  
-  /** Full description of how to perform the exercise */
-  description?: string;
-  
-  /** Category for the exercise */
-  category?: string;
-  
-  /** Tags for filtering and organizing */
-  tags?: string[];
-  
-  /** Related variations of this exercise */
-  variations?: string[];
-}
-
-/**
- * Properties needed when creating/editing an exercise.
- */
-export interface ExerciseFormData {
-  /** Name of the exercise */
-  name: string;
-  
-  /** Description of how to perform the exercise */
-  description?: string;
-  
-  /** Category for grouping */
-  category?: string;
-  
-  /** Tags for filtering and organizing */
-  tags?: string[];
-  
-  /** Related variations */
-  variations?: string[];
-}
-
-/**
- * Minimal exercise data for selection contexts
- */
-export interface ExerciseSelectionData {
-  /** Unique identifier for the exercise */
-  id: string;
-  
-  /** Name of the exercise */
-  name: string;
-  
-  /** Whether the exercise is currently selected */
-  selected?: boolean;
-  
-  /** Whether the exercise is part of an active session */
-  inActiveSession?: boolean;
-}
-
-/**
- * Helper functions to convert between interfaces
- */
-
-/**
- * Convert a full Exercise to an ExerciseListItem interface.
+ * Converts a full Exercise to an ExerciseListItem.
  */
 export function toExerciseListItem(exercise: Exercise): ExerciseListItem {
   return {
     id: exercise.id,
     name: exercise.name,
     category: exercise.category,
-    description: exercise.description
+    tags: exercise.tags
   };
 }
 
 /**
- * Convert a full Exercise to an ExerciseDetail interface.
+ * Converts a full Exercise to an ExerciseDetail.
  */
 export function toExerciseDetail(exercise: Exercise): ExerciseDetail {
   return {
@@ -121,12 +86,14 @@ export function toExerciseDetail(exercise: Exercise): ExerciseDetail {
     description: exercise.description,
     category: exercise.category,
     tags: exercise.tags,
-    variations: exercise.variations
+    variations: exercise.variations,
+    createdAt: exercise.createdAt,
+    updatedAt: exercise.updatedAt
   };
 }
 
 /**
- * Convert a full Exercise to an ExerciseSelectionData interface.
+ * Converts a full Exercise to an ExerciseSelectionData.
  */
 export function toExerciseSelectionData(
   exercise: Exercise, 
@@ -136,13 +103,15 @@ export function toExerciseSelectionData(
   return {
     id: exercise.id,
     name: exercise.name,
+    category: exercise.category,
+    tags: exercise.tags,
     selected,
     inActiveSession
   };
 }
 
 /**
- * Convert an Exercise to ExerciseFormData for editing.
+ * Converts a full Exercise to ExerciseFormData for editing.
  */
 export function toExerciseFormData(exercise: Exercise): ExerciseFormData {
   return {
@@ -155,20 +124,40 @@ export function toExerciseFormData(exercise: Exercise): ExerciseFormData {
 }
 
 /**
- * Group exercises by category
+ * Creates a new Exercise from form data and an ID.
  */
-export function groupExercisesByCategory(exercises: Exercise[]): ExerciseGroup[] {
-  const groups = new Map<string, ExerciseListItem[]>();
-  
-  exercises.forEach(exercise => {
-    const group = exercise.category || 'Other';
-    if (!groups.has(group)) {
-      groups.set(group, []);
-    }
-    groups.get(group)?.push(toExerciseListItem(exercise));
-  });
+export function createExerciseFromFormData(
+  formData: ExerciseFormData, 
+  id: string
+): Exercise {
+  return {
+    id,
+    name: formData.name,
+    description: formData.description,
+    category: formData.category,
+    tags: formData.tags,
+    variations: formData.variations,
+    createdAt: new Date().toISOString()
+  };
+}
 
-  return Array.from(groups.entries()).map(([name, exercises]) => ({
+/**
+ * Groups exercises by their categories.
+ */
+export function groupExercisesByCategory(exercises: ExerciseListItem[]): ExerciseGroup[] {
+  const groups: Record<string, ExerciseListItem[]> = {};
+  
+  // Group exercises by category
+  exercises.forEach(exercise => {
+    const category = exercise.category || 'Uncategorized';
+    if (!groups[category]) {
+      groups[category] = [];
+    }
+    groups[category].push(exercise);
+  });
+  
+  // Convert to array of ExerciseGroup
+  return Object.entries(groups).map(([name, exercises]) => ({
     name,
     exercises
   }));

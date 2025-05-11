@@ -18,7 +18,7 @@ interface PastSessionBottomSheetProps {
 export function PastSessionBottomSheet({ 
   children, 
   initialSnapPoints = ['10%', '45%', '85%'],
-  initialTitle = 'Past Sessions'
+  initialTitle = 'History'
 }: PastSessionBottomSheetProps) {
   const navigation = useNavigation<BottomSheetNavigationProp>();
   const bottomSheetRef = useRef<BottomSheet>(null);

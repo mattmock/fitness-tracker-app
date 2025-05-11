@@ -133,12 +133,10 @@ export function HomeScreen() {
             </TouchableWithoutFeedback>
           </KeyboardAwareScrollView>
           
-          {/* Bottom sheet */}
-          {pastSessions.length > 0 && (
-            <PastSessionBottomSheet initialSnapPoints={snapPoints}>
-              <RecentSessionHistory sessions={pastSessions} />
-            </PastSessionBottomSheet>
-          )}
+          {/* Bottom sheet - now always visible */}
+          <PastSessionBottomSheet initialSnapPoints={['10%', '45%', '85%']}>
+            <RecentSessionHistory sessions={pastSessions} />
+          </PastSessionBottomSheet>
         </View>
       </BottomSheetModalProvider>
     </SafeAreaView>

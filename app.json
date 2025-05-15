@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "jsEngine": "hermes",
     "sdkVersion": "53.0.0",
     "splash": {
@@ -23,11 +23,15 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      [
+        "expo-sqlite",
+        {
+          "enableSQLDebugging": true
+        }
+      ]
     ],
     "android": {
-      "package": "com.anonymous.FitnessTracker",
-      "jsEngine": "hermes"
+      "package": "com.anonymous.FitnessTracker"
     }
   }
 }

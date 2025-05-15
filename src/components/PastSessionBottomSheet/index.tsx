@@ -108,4 +108,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 4,
   },
-}); 
+});
+
+export default PastSessionBottomSheet; 

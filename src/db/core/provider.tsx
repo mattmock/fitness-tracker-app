@@ -1,22 +1,37 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { DATABASE_NAME } from '../schema/schema';
 import { migrateDbIfNeeded } from './databaseSetup';
 import { DatabaseContext } from './hooks';
 import type { DatabaseProviderProps } from './types';
+import type { SQLiteDatabase } from './sqlite';
+import { castToSQLiteDatabase } from './sqlite';
 import { ExerciseService, RoutineService, SessionService } from '../services';
 
 /**
  * Internal provider component that provides database context
  */
 export function DatabaseContextProvider({ children }: DatabaseProviderProps) {
-  const db = useSQLiteContext();
+  console.log('[DatabaseContextProvider] Initializing...');
+  const expoDb = useSQLiteContext();
+  const db = castToSQLiteDatabase(expoDb);
+  console.log('[DatabaseContextProvider] SQLite context obtained:', db ? 'yes' : 'no');
 
-  const services = useMemo(() => ({
-    exerciseService: new ExerciseService(db),
-    routineService: new RoutineService(db),
-    sessionService: new SessionService(db)
-  }), [db]);
+  useEffect(() => {
+    // Only run on mount
+    migrateDbIfNeeded(db).catch((err) => {
+      console.error('[DatabaseContextProvider] Migration failed:', err);
+    });
+  }, [db]);
+
+  const services = useMemo(() => {
+    console.log('[DatabaseContextProvider] Creating services...');
+    return {
+      exerciseService: new ExerciseService(db),
+      routineService: new RoutineService(db),
+      sessionService: new SessionService(db)
+    };
+  }, [db]);
 
   const forceReset = async () => {
     try {
@@ -46,13 +61,16 @@ export function DatabaseContextProvider({ children }: DatabaseProviderProps) {
  * Main database provider that sets up SQLite and provides database context
  */
 export function DatabaseProvider({ children }: DatabaseProviderProps) {
+  console.log('[DatabaseProvider] Initializing...');
   return (
     <SQLiteProvider 
       databaseName={DATABASE_NAME}
-      onInit={migrateDbIfNeeded}
       useSuspense
-      children={<DatabaseContextProvider children={children} />}
-    />
+    >
+      <DatabaseContextProvider>
+        {children}
+      </DatabaseContextProvider>
+    </SQLiteProvider>
   );
 }
 

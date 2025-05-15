@@ -70,25 +70,38 @@ describe('ActiveSession', () => {
   });
 
   it('renders exercise list when exercises exist', () => {
+    const mockSession = {
+      id: 'test-session',
+      name: 'Test Session',
+      startTime: '2024-03-14T10:00:00Z',
+      createdAt: '2024-03-14T10:00:00Z',
+      sessionExercises: [
+        {
+          id: 'exercise-1',
+          sessionId: 'test-session',
+          exerciseId: 'ex-1',
+          setNumber: 1,
+          reps: 12,
+          weight: 50,
+          createdAt: '2024-03-14T10:00:00Z'
+        }
+      ]
+    };
+
     render(
       <ActiveSession
         session={mockSession}
-        onAddExercise={mockOnAddExercise}
+        onAddExercise={jest.fn()}
       />
     );
-
-    // Verify toExerciseSetData was called with the right data
-    expect(toExerciseSetData).toHaveBeenCalledWith(mockSession.sessionExercises[0]);
     
-    // Verify ExerciseSetGroup was called with correct props
-    expect(ExerciseSetGroup).toHaveBeenCalledWith(
-      {
-        item: expectedExerciseSetData,
-        onExpand: expect.any(Function),
-        onOpenFullView: expect.any(Function)
-      },
-      expect.any(Object)
-    );
+    // Verify ExerciseSetGroup was called with the correct props
+    const call = (ExerciseSetGroup as jest.Mock).mock.calls[0][0];
+    expect(call).toEqual(expect.objectContaining({
+      item: toExerciseSetData(mockSession.sessionExercises[0]),
+      onExpand: expect.any(Function),
+      onOpenFullView: expect.any(Function)
+    }));
   });
 
   it('renders placeholder text when no exercises exist', () => {

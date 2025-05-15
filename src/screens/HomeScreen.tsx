@@ -82,7 +82,7 @@ export function HomeScreen() {
       };
 
       fetchSessions();
-    }, [sessionService])
+    }, [])
   );
 
   const handleAddExercise = () => {
@@ -92,7 +92,7 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <BottomSheetModalProvider>
-        <View style={styles.container}>
+        <View style={styles.container} testID="home-screen">
           {/* Main content with scrollable header */}
           <KeyboardAwareScrollView
             style={styles.keyboardAwareView}

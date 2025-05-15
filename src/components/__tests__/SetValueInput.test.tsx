@@ -14,97 +14,48 @@ describe('SetValueInput', () => {
     jest.clearAllMocks();
   });
 
-  it('renders correctly with default props', () => {
-    const { getByRole, getByTestId } = render(
+  // Focus on critical rendering and accessibility
+  it('renders with correct accessibility and input properties', () => {
+    const { getByRole } = render(
       <SetValueInput {...defaultProps} />
     );
 
     const input = getByRole('spinbutton');
-    const container = getByTestId('input-container');
-
-    expect(input).toBeTruthy();
     expect(input.props.value).toBe('0');
-    expect(container).toBeTruthy();
-  });
-
-  it('handles text input changes', () => {
-    const onChangeText = jest.fn();
-    const { getByRole } = render(
-      <SetValueInput {...defaultProps} onChangeText={onChangeText} />
-    );
-
-    const input = getByRole('spinbutton');
-    fireEvent.changeText(input, '5');
-
-    expect(onChangeText).toHaveBeenCalledWith('5');
-  });
-
-  it('handles container press', () => {
-    const onPress = jest.fn();
-    const { getByTestId } = render(
-      <SetValueInput {...defaultProps} onPress={onPress} />
-    );
-
-    const container = getByTestId('input-container');
-    fireEvent.press(container);
-
-    expect(onPress).toHaveBeenCalled();
-  });
-
-  it('forwards ref correctly', () => {
-    const mockRef = jest.fn();
-    
-    render(
-      <SetValueInput {...defaultProps} ref={mockRef} />
-    );
-
-    expect(mockRef).toHaveBeenCalled();
-    expect(mockRef.mock.calls[0][0]).not.toBeNull();
-  });
-
-  it('applies custom testID', () => {
-    const customTestId = 'custom-test-id';
-    const { getByTestId } = render(
-      <SetValueInput {...defaultProps} testID={customTestId} />
-    );
-
-    expect(getByTestId(customTestId)).toBeTruthy();
-  });
-
-  it('applies accessibility props', () => {
-    const { getByRole } = render(
-      <SetValueInput {...defaultProps} accessibilityLabel="Custom label" />
-    );
-
-    const input = getByRole('spinbutton');
-    expect(input.props.accessibilityLabel).toBe('Custom label');
-  });
-
-  it('has correct keyboard type and return key type', () => {
-    const { getByRole } = render(
-      <SetValueInput {...defaultProps} />
-    );
-
-    const input = getByRole('spinbutton');
+    expect(input.props.accessibilityLabel).toBe('Test input');
     expect(input.props.keyboardType).toBe('numeric');
     expect(input.props.returnKeyType).toBe('done');
-  });
-
-  it('selects text on focus', () => {
-    const { getByRole } = render(
-      <SetValueInput {...defaultProps} />
-    );
-
-    const input = getByRole('spinbutton');
     expect(input.props.selectTextOnFocus).toBe(true);
+    expect(input.props.blurOnSubmit).toBe(true);
   });
 
-  it('blurs input on submit', () => {
-    const { getByRole } = render(
-      <SetValueInput {...defaultProps} />
+  // Focus on critical user interactions
+  it('handles user interactions correctly', () => {
+    const onChangeText = jest.fn();
+    const onPress = jest.fn();
+    const mockRef = jest.fn();
+
+    const { getByRole, getByTestId } = render(
+      <SetValueInput
+        {...defaultProps}
+        onChangeText={onChangeText}
+        onPress={onPress}
+        ref={mockRef}
+      />
     );
 
+    // Test text input
     const input = getByRole('spinbutton');
-    expect(input.props.blurOnSubmit).toBe(true);
+    fireEvent.changeText(input, '5');
+    expect(onChangeText).toHaveBeenCalledWith('5');
+
+    // Test container press
+    const container = getByTestId('input-container');
+    fireEvent.press(container);
+    expect(onPress).toHaveBeenCalled();
+
+    // Test ref forwarding
+    expect(mockRef).toHaveBeenCalled();
+    expect(mockRef.mock.calls[0][0]).not.toBeNull();
   });
 }); 

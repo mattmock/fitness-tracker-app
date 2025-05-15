@@ -1,4 +1,4 @@
-import { SQLiteDatabase } from 'expo-sqlite';
+import * as SQLite from 'expo-sqlite';
 import { indexes } from './indexes';
 
 export const DATABASE_NAME = 'fitness_tracker.db';

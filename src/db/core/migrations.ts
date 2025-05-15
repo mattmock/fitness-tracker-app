@@ -1,4 +1,4 @@
-import { type SQLiteDatabase } from 'expo-sqlite';
+import type { SQLiteDatabase } from './sqlite';
 import { schema } from '../schema/schema';
 
 /**
@@ -54,8 +54,8 @@ export async function migrateDatabase(db: SQLiteDatabase) {
       // Verify the columns were added
       try {
         console.log(`[Migration] Verifying columns were added`);
-        const tableInfo = await db.getAllAsync('PRAGMA table_info(session_exercises)');
-        const columns = tableInfo.map((col: any) => col.name);
+        const tableInfo = await db.getAllAsync<{ name: string }>('PRAGMA table_info(session_exercises)');
+        const columns = tableInfo.map(col => col.name);
         console.log(`[Migration] session_exercises columns after migration:`, columns);
         
         const hasCompletedColumn = columns.includes('completed');

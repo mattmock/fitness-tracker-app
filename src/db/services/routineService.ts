@@ -1,4 +1,4 @@
-import { type SQLiteDatabase } from 'expo-sqlite';
+import { type SQLiteDatabase } from '../core/sqlite';
 import { Routine } from '../../types/database';
 
 interface RoutineRow {

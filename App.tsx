@@ -34,11 +34,11 @@ function AppProviders({ children }: PropsWithChildren) {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ConfigProvider>
-          <DatabaseProvider children={
+          <DatabaseProvider>
             <Suspense fallback={<Fallback />}>
               {children}
             </Suspense>
-          } />
+          </DatabaseProvider>
         </ConfigProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

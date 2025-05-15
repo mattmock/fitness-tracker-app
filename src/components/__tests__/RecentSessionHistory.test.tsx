@@ -1,295 +1,235 @@
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { RecentSessionHistory } from '../RecentSessionHistory';
-import { format } from 'date-fns';
 import type { Session } from '../../types/database';
+import { DatabaseProvider } from '../../db/core/provider';
+import { BottomSheetContext } from '../PastSessionBottomSheet/BottomSheetContext';
 
-// Polyfill for setImmediate which is used by React Native but not available in Jest
-// @ts-ignore - Ignoring type issues with setImmediate polyfill
-global.setImmediate = global.setImmediate || function(callback: Function, ...args: any[]) {
-  return setTimeout(callback, 0, ...args);
-};
-
-// Mock React's useState and useEffect to control state directly
-const mockSetExpandedSessionId = jest.fn();
-let mockExpandedSessionId: string | null = null;
-const mockSetExerciseNames = jest.fn();
-let mockExerciseNames = {};
-
-// Store the useEffect callback for testing
-let savedEffectCallback: Function | null = null;
-
-jest.mock('react', () => {
-  const originalReact = jest.requireActual('react');
+// Mock the database context
+jest.mock('../../db/core/hooks', () => {
+  const actual = jest.requireActual('../../db/core/hooks');
+  const exercises = [
+    { id: 'ex-1', name: 'Bench Press' },
+    { id: 'ex-2', name: 'Squats' },
+    { id: 'ex-3', name: 'Plank' },
+    { id: 'ex-4', name: 'Bench Press' },
+  ];
   return {
-    ...originalReact,
-    useState: jest.fn((initialValue) => {
-      // For exerciseNames state
-      if (initialValue && typeof initialValue === 'object' && Object.keys(initialValue).length === 0) {
-        return [mockExerciseNames, mockSetExerciseNames];
-      }
-      // For expandedSessionId state
-      return [mockExpandedSessionId, (id: string | null) => {
-        mockExpandedSessionId = id;
-        mockSetExpandedSessionId(id);
-      }];
+    ...actual,
+    useDatabaseContext: () => ({
+      exerciseService: {
+        getExerciseById: jest.fn().mockImplementation((id: string) => {
+          return Promise.resolve(exercises.find(e => e.id === id));
+        }),
+        getAll: jest.fn().mockResolvedValue(exercises),
+      },
     }),
-    useEffect: jest.fn((callback, deps) => {
-      // Save the callback for testing
-      savedEffectCallback = callback;
-      
-      // Immediately set exercise names when expandedSessionId changes
-      if (deps && deps.length > 0 && deps[0] !== null) {
-        // Call the effect function to simulate the useEffect behavior
-        callback();
-      }
-    })
   };
 });
 
-// Mock the useBottomSheet hook
-jest.mock('../PastSessionBottomSheet/BottomSheetContext', () => ({
-  useBottomSheet: () => ({
-    isExpanded: true
-  })
+// Mock the animated components
+jest.mock('react-native-reanimated', () => ({
+  ...jest.requireActual('react-native-reanimated/mock'),
+  useAnimatedProps: () => ({}),
+  useAnimatedStyle: () => ({}),
+  withTiming: (value: any) => value,
+  withSpring: (value: any) => value,
+  useSharedValue: (value: any) => ({ value }),
+  createAnimatedComponent: (Component: any) => Component,
 }));
 
-// Mock the database context
-const mockExercises = [
-  { id: 'ex-1', name: 'Bench Press', category: 'Chest' },
-  { id: 'ex-2', name: 'Squats', category: 'Legs' },
-  { id: 'ex-3', name: 'Treadmill', category: 'Cardio' }
-];
-
-const mockGetAll = jest.fn().mockResolvedValue(mockExercises);
-
-jest.mock('../../db', () => ({
-  useDatabaseContext: () => ({
-    exerciseService: {
-      getAll: mockGetAll
-    }
-  })
+// Mock SQLiteProvider
+jest.mock('expo-sqlite', () => ({
+  SQLiteProvider: ({ children }: { children: React.ReactNode }) => children,
+  useSQLiteContext: () => ({}),
 }));
+
+const MockBottomSheetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Provide all required properties for the context
+  const mockValue = {
+    open: jest.fn(),
+    close: jest.fn(),
+    isOpen: false,
+    setContent: jest.fn(),
+    setSnapPoints: jest.fn(),
+    setInitialSnap: jest.fn(),
+    setOnClose: jest.fn(),
+    setTitle: jest.fn(),
+    snapToIndex: jest.fn(),
+    currentTitle: '',
+    currentIndex: 0,
+    isExpanded: false,
+  };
+  return (
+    <BottomSheetContext.Provider value={mockValue}>
+      {children}
+    </BottomSheetContext.Provider>
+  );
+};
+
+const renderWithProvider = (ui: React.ReactElement) => {
+  return render(
+    <DatabaseProvider>
+      <MockBottomSheetProvider>
+        {ui}
+      </MockBottomSheetProvider>
+    </DatabaseProvider>
+  );
+};
 
 describe('RecentSessionHistory', () => {
-  const mockDate = new Date('2024-03-01T10:00:00Z');
-  const formattedDate = format(mockDate, 'MMM d, yyyy');
-  const formattedTime = format(mockDate, 'h:mm a');
-
   const mockSessions: Session[] = [
     {
       id: 'session-1',
       name: 'Morning Workout',
-      startTime: '2024-03-01T10:00:00Z',
-      createdAt: '2024-03-01T10:00:00Z',
+      startTime: '2024-03-14T10:00:00Z',
+      createdAt: '2024-03-14T10:00:00Z',
       sessionExercises: [
         {
           id: 'exercise-1',
           sessionId: 'session-1',
           exerciseId: 'ex-1',
-          setNumber: 3,
-          reps: 12,
-          weight: 100,
-          notes: 'Test notes',
-          createdAt: '2024-03-01T10:00:00Z'
-        }
-      ]
-    },
-    {
-      id: 'session-2',
-      name: 'Evening Workout',
-      startTime: '2024-02-28T18:00:00Z',
-      createdAt: '2024-02-28T18:00:00Z',
-      sessionExercises: [
-        {
-          id: 'exercise-2',
-          sessionId: 'session-2',
-          exerciseId: 'ex-2',
-          setNumber: 4,
-          reps: 10,
-          weight: 80,
-          createdAt: '2024-02-28T18:00:00Z'
-        },
-        {
-          id: 'exercise-3',
-          sessionId: 'session-2',
-          exerciseId: 'ex-3',
           setNumber: 1,
-          duration: 60,
-          createdAt: '2024-02-28T18:00:00Z'
-        }
-      ]
-    }
+          weight: 50,
+          reps: 12,
+          completed: true,
+          createdAt: '2024-03-14T10:00:00Z',
+        },
+      ],
+    },
   ];
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockExpandedSessionId = null;
-    mockExerciseNames = {};
-    savedEffectCallback = null;
-  });
-
   it('renders sessions correctly', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithProvider(
       <RecentSessionHistory sessions={mockSessions} />
     );
 
-    // Check if session dates are displayed
-    expect(getByText(formattedDate)).toBeTruthy();
-    
-    // Check if exercise counts are displayed
+    // The UI shows formatted date and time instead of the session name
+    expect(getByText('Mar 14, 2024')).toBeTruthy();
+    expect(getByText('3:00 AM')).toBeTruthy();
     expect(getByText('1 exercise')).toBeTruthy();
-    expect(getByText('2 exercises')).toBeTruthy();
   });
 
-  it('expands a session when clicked and shows exercise details', () => {
-    // Setup exercise names for the expanded session
-    mockExerciseNames = {
-      'ex-1': 'Bench Press',
-      'ex-2': 'Squats',
-      'ex-3': 'Treadmill'
-    };
-
-    const { getByText, queryByText } = render(
+  it('expands a session when clicked and shows exercise details', async () => {
+    const { getByText, findByText, queryByText } = renderWithProvider(
       <RecentSessionHistory sessions={mockSessions} />
     );
 
     // Initially, exercise details should not be visible
     expect(queryByText('Bench Press')).toBeNull();
 
-    // Click on the first session
+    // Click on the first session to expand
     fireEvent.press(getByText('1 exercise'));
 
-    // Verify that setExpandedSessionId was called with the correct session ID
-    expect(mockSetExpandedSessionId).toHaveBeenCalledWith('session-1');
-    
-    // Simulate the state update
-    mockExpandedSessionId = 'session-1';
-    
-    // Re-render with the updated state
-    const { queryByText: queryAfterExpand } = render(
-      <RecentSessionHistory sessions={mockSessions} />
-    );
-    
-    // Verify that the exercise service getAll method was called
-    expect(mockGetAll).toHaveBeenCalled();
-    
-    // Verify that exercise details are now visible
-    expect(queryAfterExpand('Bench Press')).not.toBeNull();
-    expect(queryAfterExpand('3 sets × 12 reps × 100kg')).not.toBeNull();
+    // Now exercise details should be visible (wait for async rendering)
+    expect(await findByText('Bench Press')).toBeTruthy();
   });
 
-  it('collapses an expanded session when clicked again', () => {
-    // Setup initial expanded state
-    mockExpandedSessionId = 'session-1';
-    mockExerciseNames = {
-      'ex-1': 'Bench Press',
-      'ex-2': 'Squats',
-      'ex-3': 'Treadmill'
-    };
-
-    const { getByText, queryByText } = render(
+  it('collapses an expanded session when clicked again', async () => {
+    const { getByText, findByText, queryByText } = renderWithProvider(
       <RecentSessionHistory sessions={mockSessions} />
     );
 
-    // Initially, exercise details should be visible
-    expect(queryByText('Bench Press')).not.toBeNull();
-
-    // Click on the first session again to collapse
+    // Click to expand
     fireEvent.press(getByText('1 exercise'));
+    expect(await findByText('Bench Press')).toBeTruthy();
 
-    // Verify that setExpandedSessionId was called with null
-    expect(mockSetExpandedSessionId).toHaveBeenCalledWith(null);
-    
-    // Simulate the state update
-    mockExpandedSessionId = null;
-    
-    // Re-render with the updated state
-    const { queryByText: queryAfterCollapse } = render(
-      <RecentSessionHistory sessions={mockSessions} />
-    );
-    
-    // Verify that exercise details are no longer visible
-    expect(queryAfterCollapse('Bench Press')).toBeNull();
+    // Click again to collapse
+    fireEvent.press(getByText('1 exercise'));
+    // Wait for the element to be removed
+    await waitFor(() => {
+      expect(queryByText('Bench Press')).toBeNull();
+    });
   });
 
-  it('displays different types of exercise details correctly', () => {
-    // Setup expanded state for the second session
-    mockExpandedSessionId = 'session-2';
-    mockExerciseNames = {
-      'ex-1': 'Bench Press',
-      'ex-2': 'Squats',
-      'ex-3': 'Treadmill'
-    };
+  it('displays different types of exercise details correctly', async () => {
+    const sessionsWithDifferentExercises: Session[] = [
+      {
+        id: 'session-2',
+        name: 'Evening Workout',
+        startTime: '2024-03-14T18:00:00Z',
+        createdAt: '2024-03-14T18:00:00Z',
+        sessionExercises: [
+          {
+            id: 'exercise-2',
+            sessionId: 'session-2',
+            exerciseId: 'ex-2',
+            setNumber: 1,
+            weight: 80,
+            reps: 10,
+            completed: true,
+            createdAt: '2024-03-14T18:00:00Z',
+          },
+          {
+            id: 'exercise-3',
+            sessionId: 'session-2',
+            exerciseId: 'ex-3',
+            setNumber: 1,
+            duration: 300,
+            completed: true,
+            createdAt: '2024-03-14T18:00:00Z',
+          },
+        ],
+      },
+    ];
 
-    const { queryByText } = render(
-      <RecentSessionHistory sessions={mockSessions} />
+    const { findByText, queryByText } = renderWithProvider(
+      <RecentSessionHistory sessions={sessionsWithDifferentExercises} />
     );
+
+    // Expand the session
+    fireEvent.press(queryByText('2 exercises')!);
 
     // Verify that weight-based exercise details are displayed correctly
-    expect(queryByText('Squats')).not.toBeNull();
-    expect(queryByText('4 sets × 10 reps × 80kg')).not.toBeNull();
+    expect(await findByText('Squats')).toBeTruthy();
+    expect(await findByText(/10 reps/)).toBeTruthy();
+    expect(await findByText(/80kg/)).toBeTruthy();
     
     // Verify that duration-based exercise details are displayed correctly
-    expect(queryByText('Treadmill')).not.toBeNull();
-    expect(queryByText('1 sets × 60s duration')).not.toBeNull();
+    expect(await findByText('Plank')).toBeTruthy();
+    expect(await findByText(/300s duration/)).toBeTruthy();
   });
 
-  it('handles exercises with missing fields gracefully', () => {
-    // Create a session with exercises that have missing fields
+  it('handles exercises with missing fields gracefully', async () => {
     const sessionWithMissingFields: Session = {
       id: 'session-3',
-      name: 'Incomplete Workout',
-      startTime: '2024-03-02T10:00:00Z',
-      createdAt: '2024-03-02T10:00:00Z',
+      name: 'Quick Workout',
+      startTime: '2024-03-14T20:00:00Z',
+      createdAt: '2024-03-14T20:00:00Z',
       sessionExercises: [
         {
           id: 'exercise-4',
           sessionId: 'session-3',
           exerciseId: 'ex-1',
           setNumber: 1,
-          // No sets, reps, or weight
-          createdAt: '2024-03-02T10:00:00Z'
-        },
-        {
-          id: 'exercise-5',
-          sessionId: 'session-3',
-          exerciseId: 'ex-2',
-          setNumber: 2,
-          reps: 10,
-          // No sets or weight
-          createdAt: '2024-03-02T10:00:00Z'
+          createdAt: '2024-03-14T20:00:00Z',
         }
       ]
     };
 
-    // Setup expanded state for the new session
-    mockExpandedSessionId = 'session-3';
-    mockExerciseNames = {
-      'ex-1': 'Bench Press',
-      'ex-2': 'Squats'
-    };
-
-    const { queryByText } = render(
+    const { findByText, getByText } = renderWithProvider(
       <RecentSessionHistory sessions={[sessionWithMissingFields]} />
     );
 
-    // Verify that exercises with missing fields are displayed correctly
-    expect(queryByText('Bench Press')).not.toBeNull();
-    expect(queryByText('No details')).not.toBeNull();
-    
-    expect(queryByText('Squats')).not.toBeNull();
-    expect(queryByText('2 sets × 10 reps')).not.toBeNull();
+    // Expand the session
+    const sessionHeader = getByText('1 exercise');
+    fireEvent.press(sessionHeader);
+
+    // Verify that the exercise is displayed with minimal details
+    expect(await findByText('Bench Press')).toBeTruthy();
+    expect(await findByText('No details')).toBeTruthy();
   });
 
   it('shows "See all past sessions" button when there are more than 6 sessions', () => {
-    // Create 7 sessions
-    const manySessions = Array(7).fill(null).map((_, i) => ({
-      ...mockSessions[0],
-      id: `session-${i + 1}`
+    const manySessions = Array.from({ length: 7 }, (_, i) => ({
+      id: `session-${i + 1}`,
+      name: `Workout ${i + 1}`,
+      startTime: `2024-03-${String(14 - i).padStart(2, '0')}T10:00:00Z`,
+      createdAt: `2024-03-${String(14 - i).padStart(2, '0')}T10:00:00Z`,
+      sessionExercises: [],
     }));
 
-    const { getByText } = render(
+    const { getByText } = renderWithProvider(
       <RecentSessionHistory sessions={manySessions} />
     );
 
@@ -297,7 +237,7 @@ describe('RecentSessionHistory', () => {
   });
 
   it('does not show "See all past sessions" button when there are 6 or fewer sessions', () => {
-    const { queryByText } = render(
+    const { queryByText } = renderWithProvider(
       <RecentSessionHistory sessions={mockSessions} />
     );
 

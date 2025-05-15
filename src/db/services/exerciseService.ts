@@ -1,4 +1,4 @@
-import { type SQLiteDatabase } from 'expo-sqlite';
+import { type SQLiteDatabase } from '../core/sqlite';
 import { Exercise } from '../../types/database';
 
 interface ExerciseRow {

@@ -1,4 +1,5 @@
-import { type SQLiteDatabase } from 'expo-sqlite';
+import * as SQLite from 'expo-sqlite';
+import type { SQLiteDatabase } from './sqlite';
 import { migrateDatabase } from './migrations';
 
 // Define a type for the table info result
@@ -32,9 +33,10 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
     const tableExists = await db.getFirstAsync<{ count: number }>(
       "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name='session_exercises'"
     );
-    console.log('[Provider] session_exercises table exists:', tableExists?.count > 0);
+    const exists = tableExists?.count ?? 0;
+    console.log('[Provider] session_exercises table exists:', exists > 0);
     
-    if (tableExists?.count === 0) {
+    if (exists === 0) {
       console.log('[Provider] session_exercises table does not exist, will be created during migration');
     }
   } catch (error) {
